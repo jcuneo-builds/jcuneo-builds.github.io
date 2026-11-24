@@ -1,0 +1,1042 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fee Sheet Builder</title>
+<meta name="description" content="Replacing a formula-heavy pricing spreadsheet with an app that prices, checks, approves and files every fee sheet.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #061430;
+    --navy-800: #0A1F44;
+    --navy-700: #0F2C5C;
+    --navy-600: #1A3F7A;
+    --blue-500: #2F6FD6;
+    --blue-400: #5B95F0;
+    --blue-300: #93BDF7;
+    --blue-200: #C7DDFB;
+    --blue-100: #E3EEFD;
+    --blue-50:  #F3F8FF;
+    --ink: #0B1B36;
+    --ink-2: #3A4D6B;
+    --ink-3: #6A7C98;
+    --line: #D6E3F5;
+    --white: #FFFFFF;
+    --warn: #B7791F;
+    --warn-bg: #FDF3E1;
+    --ok: #1F8A5B;
+    --ok-bg: #E4F5EC;
+    --radius: 14px;
+    --radius-sm: 10px;
+    --shadow-sm: 0 1px 2px rgba(10,31,68,.06), 0 2px 8px rgba(10,31,68,.05);
+    --shadow: 0 1px 2px rgba(10,31,68,.06), 0 12px 32px -8px rgba(10,31,68,.18);
+    --page: 1120px;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+  body {
+    margin: 0;
+    background: var(--blue-50);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .wrap { max-width: var(--page); margin: 0 auto; padding: 0 28px; }
+  a { color: var(--blue-500); }
+  strong { font-weight: 600; color: var(--ink); }
+  p { margin: 0 0 16px; color: var(--ink-2); }
+  h1, h2, h3, h4 { margin: 0; color: var(--ink); letter-spacing: -0.02em; }
+  h2 { font-size: clamp(30px, 4vw, 42px); line-height: 1.1; font-weight: 700; margin-bottom: 18px; }
+  h3 { font-size: 22px; line-height: 1.3; font-weight: 600; margin: 44px 0 12px; }
+  code {
+    font-family: var(--mono); font-size: 0.82em;
+    background: var(--blue-100); color: var(--navy-700);
+    border: 1px solid var(--blue-200); border-radius: 6px; padding: 1px 6px;
+    word-break: break-word;
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 12.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--blue-500); margin-bottom: 14px;
+  }
+  .eyebrow::before { content: ""; width: 22px; height: 2px; background: currentColor; border-radius: 2px; }
+  .section-lede { font-size: 19px; max-width: 760px; }
+
+  /* ---------- Progress + nav ---------- */
+  .progress { position: fixed; top: 0; left: 0; height: 3px; width: 0; z-index: 60;
+    background: linear-gradient(90deg, var(--blue-400), var(--blue-200)); }
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(6,20,48,.82); backdrop-filter: saturate(160%) blur(14px); -webkit-backdrop-filter: saturate(160%) blur(14px);
+    border-bottom: 1px solid rgba(147,189,247,.14);
+  }
+  .nav .wrap { display: flex; align-items: center; gap: 24px; height: 60px; }
+  .nav .brand { color: var(--white); font-weight: 600; font-size: 15px; white-space: nowrap; display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .nav .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--blue-300); box-shadow: 0 0 0 4px rgba(147,189,247,.18); }
+  .nav ul { list-style: none; display: flex; gap: 4px; margin: 0 0 0 auto; padding: 0; overflow-x: auto; scrollbar-width: none; }
+  .nav ul::-webkit-scrollbar { display: none; }
+  .nav a.link { display: block; padding: 6px 11px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: rgba(227,238,253,.72); text-decoration: none; white-space: nowrap; transition: background .2s, color .2s; }
+  .nav a.link:hover { color: var(--white); background: rgba(147,189,247,.12); }
+  .nav a.link.active { color: var(--white); background: rgba(147,189,247,.2); }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    position: relative; overflow: hidden; color: var(--white);
+    background:
+      radial-gradient(900px 480px at 85% -10%, rgba(91,149,240,.42), transparent 60%),
+      radial-gradient(700px 420px at -10% 110%, rgba(47,111,214,.35), transparent 60%),
+      linear-gradient(180deg, var(--navy-900), var(--navy-800));
+    padding: 96px 0 72px;
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(147,189,247,.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(147,189,247,.08) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at 60% 30%, #000 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at 60% 30%, #000 30%, transparent 75%);
+  }
+  .hero .wrap { position: relative; }
+  .status {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 13px; font-weight: 500; color: var(--blue-100);
+    padding: 6px 14px 6px 10px; border-radius: 999px;
+    background: rgba(147,189,247,.12); border: 1px solid rgba(147,189,247,.28);
+  }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: #7FD3FF; position: relative; }
+  .pulse::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid #7FD3FF; opacity: .6; animation: ping 2s infinite; }
+  @keyframes ping { 0% { transform: scale(.6); opacity: .7; } 100% { transform: scale(1.8); opacity: 0; } }
+  .hero h1 { color: var(--white); font-size: clamp(42px, 7vw, 84px); line-height: 1.02; font-weight: 800; letter-spacing: -0.035em; margin: 0 0 22px; max-width: 900px; }
+  .hero h1 span { background: linear-gradient(90deg, var(--blue-200), var(--blue-400)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero .lede { font-size: clamp(18px, 2vw, 22px); line-height: 1.5; color: rgba(227,238,253,.85); max-width: 720px; margin: 0; }
+  .meta {
+    margin-top: 48px; display: grid; grid-template-columns: repeat(3, 1fr);
+    border: 1px solid rgba(147,189,247,.2); border-radius: var(--radius);
+    background: rgba(10,31,68,.55); backdrop-filter: blur(8px); overflow: hidden;
+  }
+  .meta div { padding: 18px 22px; border-right: 1px solid rgba(147,189,247,.14); border-bottom: 1px solid rgba(147,189,247,.14); }
+  .meta div:nth-child(3n) { border-right: 0; }
+  .meta div:nth-last-child(-n+3) { border-bottom: 0; }
+  .meta dt { font-size: 11.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--blue-300); margin-bottom: 6px; }
+  .meta dd { margin: 0; font-size: 15px; line-height: 1.5; color: var(--blue-50); }
+
+  /* ---------- Sections ---------- */
+  section { padding: 96px 0; }
+  section.alt { background: var(--white); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .card { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+
+  /* ---------- Stats ---------- */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 36px; }
+  .stat { padding: 22px 22px 20px; position: relative; overflow: hidden; transition: transform .25s, box-shadow .25s; }
+  .stat:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .stat .num { font-size: 42px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; color: var(--navy-800); font-variant-numeric: tabular-nums; }
+  .stat .label { font-size: 14.5px; line-height: 1.45; color: var(--ink-2); margin-top: 8px; }
+  .stat.feature { background: linear-gradient(150deg, var(--navy-700), var(--navy-900)); border-color: var(--navy-700); }
+  .stat.feature .num, .stat.feature .label { color: var(--white); }
+  .stat.feature::after { content: ""; position: absolute; right: -40px; top: -40px; width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle, rgba(91,149,240,.45), transparent 70%); }
+
+  /* ---------- Before / after ---------- */
+  .ba { display: grid; grid-template-columns: 1fr 56px 1fr; align-items: stretch; margin-top: 36px; }
+  .ba .card { padding: 28px; }
+  .ba h4 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; margin-bottom: 16px; color: var(--ink-3); }
+  .ba .after { background: linear-gradient(160deg, var(--navy-800), var(--navy-900)); border-color: var(--navy-700); box-shadow: var(--shadow); }
+  .ba .after h4 { color: var(--blue-300); }
+  .ba .after p { color: rgba(227,238,253,.82); }
+  .ba p { font-size: 15px; margin: 18px 0 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { font-size: 13.5px; font-weight: 500; padding: 6px 12px; border-radius: 999px; }
+  .chip.old { background: var(--blue-50); color: var(--ink-3); border: 1px dashed #B8C8E0; text-decoration: line-through; text-decoration-color: rgba(106,124,152,.5); }
+  .chip.new { background: rgba(147,189,247,.14); color: var(--blue-100); border: 1px solid rgba(147,189,247,.35); }
+  .chip.new.hi { background: var(--blue-300); color: var(--navy-900); border-color: var(--blue-300); }
+  .arrow { display: flex; align-items: center; justify-content: center; color: var(--blue-500); }
+  .arrow svg { width: 28px; height: 28px; }
+
+  .brief { margin-top: 28px; padding: 24px 28px; border-left: 4px solid var(--blue-500); border-radius: var(--radius-sm); background: var(--blue-100); }
+  .brief p { margin: 0; color: var(--ink); font-size: 17px; }
+
+  /* ---------- Principles ---------- */
+  .principles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 32px; }
+  .principle { padding: 28px; transition: transform .25s, box-shadow .25s; }
+  .principle:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--blue-100); color: var(--blue-500); margin-bottom: 18px; }
+  .icon svg { width: 22px; height: 22px; }
+  .principle h4 { font-size: 19px; font-weight: 600; margin-bottom: 8px; }
+  .principle p { font-size: 15.5px; margin: 0; }
+
+  /* ---------- Workflow ---------- */
+  .flow { margin-top: 32px; padding: 10px; }
+  .flow-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 14px 16px 10px; }
+  .flow-head small { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+  .flow-row { display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: center; padding: 14px 16px; border-radius: 12px; transition: background .2s; }
+  .flow-row:hover { background: var(--blue-50); }
+  .flow-row + .flow-row { border-top: 1px solid var(--line); }
+  .step { display: flex; align-items: center; gap: 14px; }
+  .step .n { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 10px; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+  .step.meta-only .n { background: var(--blue-100); color: var(--navy-700); border: 1px solid var(--blue-200); }
+  .step.reads .n { background: var(--blue-500); color: var(--white); }
+  .step.out .n { background: var(--navy-800); color: var(--white); }
+  .step b { display: block; font-size: 15.5px; font-weight: 600; line-height: 1.3; }
+  .step small { display: block; font-size: 12.5px; color: var(--ink-3); line-height: 1.35; }
+  .flow-row p { margin: 0; font-size: 15px; line-height: 1.55; }
+  .flow-row.final { background: linear-gradient(90deg, var(--blue-100), transparent); }
+  .divider { display: flex; align-items: center; gap: 14px; padding: 10px 16px; font-size: 12.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--blue-500); }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 0; border-top: 1.5px dashed var(--blue-300); }
+  .legend { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 14px; font-size: 13.5px; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .flow .legend { padding: 10px 16px 8px; }
+
+  /* ---------- Architecture ---------- */
+  .diagram { margin-top: 32px; padding: 18px; overflow-x: auto; }
+  .diagram svg { display: block; width: 100%; min-width: 820px; height: auto; font-family: 'Inter', system-ui, sans-serif; }
+  .paths { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 18px; }
+  .path { padding: 26px; }
+  .tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; letter-spacing: .04em; padding: 4px 12px; border-radius: 999px; background: var(--blue-100); color: var(--navy-700); margin-bottom: 14px; }
+  .tag i { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--navy-700); color: var(--white); font-style: normal; font-size: 11px; }
+  .path h4 { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .path p { font-size: 15px; margin: 0; }
+
+  /* ---------- Technical ---------- */
+  .tech-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .tech-grid .card { padding: 26px; }
+  .tech-grid h4 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+  .tech-grid p { font-size: 15.5px; margin: 0; }
+  .tech-grid p + p { margin-top: 12px; }
+  .formula { display: grid; grid-template-columns: 1.1fr 1fr; gap: 0; overflow: hidden; margin-top: 18px; }
+  .formula .eq { white-space: nowrap; overflow-x: auto; background: var(--navy-900); color: var(--blue-100); padding: 26px 28px; font-family: var(--mono); font-size: 14px; line-height: 2; }
+  .formula .eq .k { color: var(--blue-300); }
+  .formula .eq .c { color: #7E93B5; }
+  .formula .why { padding: 26px 28px; }
+  .formula .why p { font-size: 15.5px; }
+  .formula .why p:last-child { margin: 0; }
+
+  .models { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-top: 18px; overflow: hidden; }
+  .model { padding: 24px 26px; }
+  .model + .model { border-left: 1px solid var(--line); }
+  .model .lbl { font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--blue-500); margin-bottom: 8px; }
+  .model h4 { font-size: 18px; margin-bottom: 6px; }
+  .model p { font-size: 14.5px; margin: 0 0 14px; }
+  .mbar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: var(--blue-100); }
+  .mbar i { display: block; height: 100%; }
+  .mbar .fx { background: var(--navy-700); }
+  .mbar .cm { background: var(--blue-300); }
+
+  .checks { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .checks li { display: flex; gap: 14px; padding: 20px; }
+  .checks li .tick { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 8px; background: var(--blue-100); color: var(--blue-500); display: grid; place-items: center; }
+  .checks li .tick svg { width: 14px; height: 14px; }
+  .checks li div { font-size: 15px; line-height: 1.55; color: var(--ink-2); }
+  .checks li strong { display: block; color: var(--ink); margin-bottom: 2px; }
+
+  /* ---------- Mock frames ---------- */
+  .output-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; margin-top: 28px; }
+  .output-item h3 { margin-top: 0; display: flex; align-items: center; gap: 12px; }
+  .output-item h3 .n { width: 30px; height: 30px; border-radius: 9px; background: var(--navy-800); color: var(--white); display: grid; place-items: center; font-size: 14px; font-weight: 700; }
+  .output-item > p { font-size: 15.5px; }
+  .window { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); background: var(--white); box-shadow: var(--shadow); }
+  .window-bar { display: flex; align-items: center; gap: 7px; padding: 11px 14px; background: var(--blue-50); border-bottom: 1px solid var(--line); }
+  .window-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--blue-200); }
+  .window-bar span { margin-left: 10px; font-size: 12px; color: var(--ink-3); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Editor mock */
+  .editor { display: grid; grid-template-columns: 200px 1fr 220px; min-height: 380px; font-size: 13px; }
+  .ed-left { background: var(--blue-50); border-right: 1px solid var(--line); padding: 16px; }
+  .ed-left .f { margin-bottom: 12px; }
+  .ed-left label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+  .ed-left .in { background: var(--white); border: 1px solid var(--line); border-radius: 7px; padding: 6px 9px; color: var(--ink); font-size: 13px; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; background: var(--white); }
+  .seg span { flex: 1; text-align: center; padding: 5px 0; font-size: 12px; color: var(--ink-2); }
+  .seg span.on { background: var(--navy-700); color: var(--white); font-weight: 600; }
+  .spend { display: grid; grid-template-columns: 1fr auto; gap: 3px 8px; font-size: 12.5px; }
+  .spend b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ed-mid { padding: 16px 16px 12px; overflow-x: auto; }
+  .ed-mid .hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .ed-mid .hd strong { font-size: 14px; }
+  .btn { font-size: 11.5px; font-weight: 600; padding: 5px 10px; border-radius: 7px; background: var(--blue-100); color: var(--navy-700); border: 1px solid var(--blue-200); white-space: nowrap; }
+  table.team { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.team th { text-align: left; font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding: 6px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  table.team td { padding: 7px 6px; border-bottom: 1px solid var(--blue-100); white-space: nowrap; }
+  table.team td.r, table.team th.r { text-align: right; font-variant-numeric: tabular-nums; }
+  table.team tr.grp td { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--blue-500); background: var(--blue-50); padding: 5px 6px; }
+  .loc { display: inline-block; font-size: 11px; padding: 0 7px; border-radius: 5px; background: var(--blue-100); color: var(--navy-700); }
+  .loc.off { background: #EEF1F6; color: var(--ink-2); }
+  .ed-right { border-left: 1px solid var(--line); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .feebox { background: linear-gradient(150deg, var(--navy-700), var(--navy-900)); color: var(--white); border-radius: 10px; padding: 14px; }
+  .feebox small { display: block; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--blue-300); }
+  .feebox .big { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .feebox .sub { font-size: 11.5px; color: rgba(227,238,253,.75); }
+  .kpis { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .kpis div { border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; }
+  .kpis small { display: block; font-size: 10px; font-weight: 600; letter-spacing: .08em; color: var(--ink-3); }
+  .kpis b { font-size: 15px; font-variant-numeric: tabular-nums; }
+  .band { border-radius: 8px; padding: 8px 10px; font-size: 12px; display: flex; gap: 8px; align-items: center; }
+  .band.warn { background: var(--warn-bg); color: var(--warn); }
+  .band.ok { background: var(--ok-bg); color: var(--ok); }
+  .band b { font-weight: 700; }
+  .appr { font-size: 12px; color: var(--ink-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  .appr div { display: flex; justify-content: space-between; }
+
+  /* Chat mock */
+  .chat { padding: 20px 22px; font-size: 14px; }
+  .msg { display: flex; gap: 12px; }
+  .avatar { width: 36px; height: 36px; flex: 0 0 36px; border-radius: 9px; background: linear-gradient(140deg, var(--blue-500), var(--navy-700)); color: var(--white); display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+  .msg .who { font-weight: 700; font-size: 14.5px; }
+  .msg .who span { font-weight: 500; font-size: 11px; color: var(--ink-3); margin-left: 6px; padding: 1px 5px; border-radius: 4px; background: var(--blue-100); }
+  .msg .who em { font-style: normal; font-weight: 400; font-size: 12px; color: var(--ink-3); margin-left: 6px; }
+  .att { margin-top: 8px; border-left: 4px solid var(--blue-500); background: var(--blue-50); border-radius: 0 8px 8px 0; padding: 12px 14px; }
+  .att .t { font-weight: 700; color: var(--blue-500); margin-bottom: 6px; }
+  .att dl { display: grid; grid-template-columns: 120px 1fr; margin: 0; row-gap: 3px; font-size: 13px; }
+  .att dt { color: var(--ink-3); }
+  .att dd { margin: 0; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .att .note { margin-top: 10px; font-size: 13px; color: var(--ink-2); }
+  .reacts { display: flex; gap: 6px; margin-top: 10px; }
+  .react { font-size: 12.5px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--blue-300); background: var(--blue-100); color: var(--navy-700); }
+  .reply { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+
+  /* Advisor mock */
+  .advisor { padding: 18px 20px 20px; font-size: 14px; }
+  .adv-head { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+  .adv-head b { display: block; font-size: 15px; }
+  .adv-head small { color: var(--ink-3); font-size: 12.5px; }
+  .spark { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 10px; display: grid; place-items: center; background: linear-gradient(140deg, var(--blue-400), var(--navy-700)); color: var(--white); font-size: 16px; }
+  .sugg { display: grid; grid-template-columns: 1.4fr 1fr auto; gap: 16px; align-items: center; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--blue-50); }
+  .sugg + .sugg { margin-top: 10px; }
+  .sugg-main { display: flex; gap: 10px; align-items: flex-start; }
+  .sugg-main b { font-size: 14px; }
+  .sugg-main p { margin: 2px 0 0; font-size: 13px; line-height: 1.5; }
+  .pill.add, .pill.chg { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 6px; margin-top: 2px; }
+  .pill.add { background: var(--ok-bg); color: var(--ok); }
+  .pill.chg { background: var(--blue-100); color: var(--navy-700); }
+  .people small { display: block; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+  .person { display: inline-block; font-size: 12.5px; padding: 2px 9px; margin: 0 4px 4px 0; border-radius: 999px; background: var(--white); border: 1px solid var(--blue-200); color: var(--ink); }
+
+  .terminal { background: var(--navy-900); border-color: #12284F; }
+  .terminal .window-bar { background: #0B1D3D; border-color: #12284F; }
+  .terminal .window-bar i { background: #22406F; }
+  .terminal .window-bar span { color: #7E93B5; }
+  .terminal pre { margin: 0; padding: 20px 22px 22px; font-family: var(--mono); font-size: 12.5px; line-height: 1.85; color: #C9D8F2; overflow-x: auto; }
+  .t-c { color: #6F86AD; }
+  .t-k { color: var(--blue-300); }
+  .t-x { color: #9FC3FF; }
+  .t-ok { color: #7FD3FF; }
+  .t-tot { color: var(--white); font-weight: 500; }
+
+  /* ---------- Impact ---------- */
+  .impact { display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; margin-top: 32px; }
+  .impact .card { padding: 26px; grid-column: span 2; transition: transform .25s, box-shadow .25s; }
+  .impact .card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .impact .card.wide { grid-column: span 3; }
+  .impact .card.lead { background: linear-gradient(150deg, var(--navy-700), var(--navy-900)); border-color: var(--navy-700); }
+  .impact .card.lead h4, .impact .card.lead .big { color: var(--white); }
+  .impact .card.lead p { color: rgba(227,238,253,.82); }
+  .impact .big { font-size: 38px; font-weight: 700; letter-spacing: -0.03em; color: var(--navy-800); line-height: 1; margin-bottom: 14px; }
+  .impact h4 { font-size: 17px; font-weight: 600; margin-bottom: 6px; line-height: 1.35; }
+  .impact p { font-size: 15px; margin: 0; }
+
+  /* ---------- Footer ---------- */
+  footer { background: var(--navy-900); color: rgba(227,238,253,.7); padding: 40px 0; font-size: 14px; }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  footer strong { color: var(--white); }
+
+  /* ---------- Reveal ---------- */
+  .js .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
+  .js .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .js .reveal { opacity: 1; transform: none; transition: none; }
+    .pulse::after { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 980px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .principles, .paths, .models { grid-template-columns: 1fr; }
+    .model + .model { border-left: 0; border-top: 1px solid var(--line); }
+    .output-grid { grid-template-columns: 1fr; }
+    .impact { grid-template-columns: 1fr 1fr; }
+    .impact .card, .impact .card.wide { grid-column: span 1; }
+    .impact .card.lead { grid-column: span 2; }
+    .formula { grid-template-columns: 1fr; }
+    .flow-row { grid-template-columns: 200px 1fr; }
+    .editor { grid-template-columns: 1fr; }
+    .ed-left, .ed-right { border: 0; }
+    .ed-left { border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+    .ed-right { border-top: 1px solid var(--line); }
+    .sugg { grid-template-columns: 1fr; gap: 10px; }
+    .sugg .btn { justify-self: start; }
+  }
+  @media (max-width: 720px) {
+    body { font-size: 16px; }
+    .wrap { padding: 0 16px; }
+    section { padding: 64px 0; }
+    .hero { padding: 64px 0 48px; }
+    .nav .brand span.full { display: none; }
+    .meta { grid-template-columns: 1fr; }
+    .meta div { border-right: 0 !important; border-bottom: 1px solid rgba(147,189,247,.14) !important; }
+    .meta div:last-child { border-bottom: 0 !important; }
+    .stat .num { font-size: 34px; }
+    .ba { grid-template-columns: 1fr; gap: 0; }
+    .arrow { height: 44px; transform: rotate(90deg); }
+    .tech-grid, .checks { grid-template-columns: 1fr; }
+    .impact { grid-template-columns: 1fr; }
+    .impact .card, .impact .card.wide, .impact .card.lead { grid-column: span 1; }
+    .flow-row { grid-template-columns: 1fr; gap: 10px; }
+    .ed-left { grid-template-columns: 1fr; }
+    .att dl { grid-template-columns: 1fr; }
+    .att dd { margin-bottom: 4px; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+
+<nav class="nav" aria-label="Sections">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="dot"></span><span class="full">Fee Sheet Builder</span></a>
+    <ul>
+      <li><a class="link" href="#problem">Problem</a></li>
+      <li><a class="link" href="#solution">Solution</a></li>
+      <li><a class="link" href="#workflow">Workflow</a></li>
+      <li><a class="link" href="#architecture">Architecture</a></li>
+      <li><a class="link" href="#technical">Technical</a></li>
+      <li><a class="link" href="#output">Output</a></li>
+      <li><a class="link" href="#impact">Impact</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <h1>Fee Sheet <span>Builder</span></h1>
+    <p class="lede">Replacing a formula-heavy pricing spreadsheet with an app that prices every team in code, checks it against resourcing rules, gets it approved and files the final version where everyone can find it. A Claude connection learns from past deals to suggest smarter teams and find the people with capacity to staff them.</p>
+    <dl class="meta">
+      <div><dt>Organization</dt><dd>Global media agency (~1,000 people)</dd></div>
+      <div><dt>Timeline</dt><dd>November 2026</dd></div>
+      <div><dt>Sponsors</dt><dd>COO and regional Operations leadership</dd></div>
+      <div><dt>Built by</dt><dd>Jen Cuneo</dd></div>
+      <div><dt>Stack</dt><dd>TypeScript, Cloud Run, Firestore, Identity-Aware Proxy, Claude, CRM, Notion and Slack APIs, Google Drive, Terraform, GitHub Actions</dd></div>
+      <div><dt>Used by</dt><dd>Account, commercial and operations teams pricing new deals and renegotiations</dd></div>
+    </dl>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ PROBLEM ============ -->
+<section id="problem" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">The problem</div>
+    <h2 class="reveal">One spreadsheet, a hundred ways to break it</h2>
+    <p class="section-lede reveal">Every new deal and every renegotiation needs a fee sheet: who works on the account, where they sit, how much of their time it takes, and what the client pays for it. Before this project, each one started as a copy of a shared Google Sheet template with thousands of formulas behind it.</p>
+
+    <div class="ba reveal">
+      <div class="card">
+        <h4>Before</h4>
+        <div class="chips">
+          <span class="chip old">Copy the template</span>
+          <span class="chip old">Overwrite a formula by accident</span>
+          <span class="chip old">"v3 FINAL (2)" in someone's Drive</span>
+          <span class="chip old">Approval in a Slack thread</span>
+          <span class="chip old">Tracker updated by hand</span>
+        </div>
+        <p>A fee sheet was only as reliable as the last person who edited it. Nobody could say which copy was final, and the pricing rules lived in people's heads.</p>
+      </div>
+      <div class="arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+      <div class="card after">
+        <h4>After</h4>
+        <div class="chips">
+          <span class="chip new hi">Every number computed in code</span>
+          <span class="chip new hi">Final versions locked</span>
+          <span class="chip new">Resourcing checks on every edit</span>
+          <span class="chip new">Approvals in one place</span>
+          <span class="chip new">Tracker fills itself</span>
+        </div>
+        <p>Pick roles, locations and time. The app works out the fee, margin and ratios, flags anything outside the rules, collects approvals and files the final version, with a full history behind it.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:40px" class="reveal">
+      <p>The spreadsheet worked, in the sense that it produced a number. But one pasted value over a formula could change a price without anyone seeing, and nobody would know until finance saw the margin months later. Rates, exchange rates and job titles were copied into every file, so an update to the template never reached the hundreds of copies already in circulation. Version control meant file names.</p>
+      <p>Review was just as scattered. The commercial team checked each sheet against a set of resourcing principles (a client lead on every account, enough senior time, no teams stacked with directors) by reading it line by line. Approvals happened in chat threads, and a separate deal tracker had to be updated by hand with the approved fee once everything was signed off.</p>
+    </div>
+    <div class="brief reveal"><p><strong>The brief:</strong> make building a fee sheet easier and more accurate for everyone, keep a real version history, and keep every final fee sheet organized and findable. Keep salary and rate data away from anyone who doesn't need it, and never send anything to a client automatically.</p></div>
+  </div>
+</section>
+
+<!-- ============ SOLUTION ============ -->
+<section id="solution">
+  <div class="wrap">
+    <div class="eyebrow reveal">The solution</div>
+    <h2 class="reveal">The app owns the math</h2>
+    <p class="section-lede reveal">A web app on Google Cloud where people build a team row by row and the server does every calculation. Deals arrive from the CRM each morning. Several people can work on one fee sheet at once and see each other's changes live. Each deal keeps every version, and once a version is marked Final it can't be edited, only superseded. Before launch, the app and the old template were run on the same sheets until every number matched.</p>
+    <div class="principles">
+      <div class="card principle reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h2M14 11h2M8 15h2M14 15h2"/></svg></div>
+        <h4>Inputs in, numbers out</h4>
+        <p>People only ever choose things: a role, a location, a percentage of time, which costs to include. There are no formulas to type over, so there are none to break.</p>
+      </div>
+      <div class="card principle reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+        <h4>Rates never reach the browser</h4>
+        <p>The ratecard and salary data live on the server. The browser gets the fee for each role and the totals, never the cost rates behind them, and only admins can see or change Settings.</p>
+      </div>
+      <div class="card principle reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div>
+        <h4>Flag, don't block</h4>
+        <p>Resourcing checks run on every edit and say exactly what is off and why. They inform the approver rather than stopping the sheet. The one hard stop is a role the ratecard can't price.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WORKFLOW ============ -->
+<section id="workflow" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">How it works</div>
+    <h2 class="reveal">From deal to Final in nine steps</h2>
+    <p class="section-lede reveal">Every fee sheet follows the same path. The first six steps happen inside the app; the last three are where the fee sheet reaches other people.</p>
+
+    <div class="card flow reveal">
+      <div class="flow-head"><strong>The life of a fee sheet</strong></div>
+
+      <div class="flow-row">
+        <div class="step meta-only"><span class="n">1</span><div><b>Deal arrives</b><small>CRM sync, every morning</small></div></div>
+        <p>A scheduled job pulls clients and deals from the CRM, so a new pitch or renegotiation is already waiting on the homepage. Nobody retypes a client name, and each deal links back to its CRM record by ID.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step meta-only"><span class="n">2</span><div><b>Draft a first team</b><small>Rules-based, optional</small></div></div>
+        <p>Enter media spend by channel and the app proposes a starting team: a client lead, an analytics role, and a pod per channel sized by that channel's spend. The same deal always gives the same draft, and nothing is added until a person chooses to add it.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step meta-only"><span class="n">3</span><div><b>Ask Claude</b><small>Past performance + capacity</small></div></div>
+        <p>Claude compares the deal with past fee sheets and how those accounts went, then suggests changes to the team: a role that similar accounts needed, a pod that was usually too thin. It also checks the resource planning and time tracking tools to name people at the right level with time free. Suggestions are just that; a person picks what to add.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step meta-only"><span class="n">4</span><div><b>Build the team</b><small>Role, location, FTE</small></div></div>
+        <p>Each row is a role from the job architecture, a location and a share of a person's time. Rows sort themselves by group, then practice, then seniority. Other editors on the same sheet see each change as it lands.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step meta-only"><span class="n">5</span><div><b>Set the commercials</b><small>Model, tech, third-party costs</small></div></div>
+        <p>Pick a commercial model (FTE, Hybrid or Commission), tick the technology and third-party costs to include, and optionally add a performance-based element on paid media fees. Scenarios let a team compare spend levels side by side.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step meta-only"><span class="n">6</span><div><b>Checks</b><small>Resourcing rules, live</small></div></div>
+        <p>About twenty resourcing rules run on every edit: minimum role size, senior mix, a client lead on every account, analytics coverage, effective commission rate against a spend-based benchmark, margin floor. Admins can change thresholds or add rules in Settings without a deploy.</p>
+      </div>
+
+      <div class="divider">Everything above stays inside the app</div>
+
+      <div class="flow-row">
+        <div class="step reads"><span class="n">7</span><div><b>Request approval</b><small>Posted to a review channel</small></div></div>
+        <p>A structured approval request goes to the commercial review channel in Slack with the fee, margin, ratios and any open checks. A ‚úÖ reaction from an approver records the approval in the app. Ordinary edits keep approvals; a change to the price clears them.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step reads"><span class="n">8</span><div><b>Mark Final</b><small>Locked on the server</small></div></div>
+        <p>Once the required approval is in, anyone on the deal can mark the version Final. The server refuses any further edit to it. A change means a new version, and the new Final supersedes the old one.</p>
+      </div>
+      <div class="flow-row final">
+        <div class="step out"><span class="n">9</span><div><b>Filed and exported</b><small>Tracker, shared drive, deck</small></div></div>
+        <p>The deal's row in the Notion tracker fills in with the fee sheet link, approved fee and key ratios. A copy of the Final lands in a view-only shared drive, replaced if it is ever superseded. Anyone can export the full fee sheet or a ready-made commercial deck.</p>
+      </div>
+
+      <div class="legend">
+        <span><i style="background:var(--blue-100);border:1px solid var(--blue-200)"></i>Inside the app</span>
+        <span><i style="background:var(--blue-500)"></i>Approval and lock</span>
+        <span><i style="background:var(--navy-800)"></i>Output</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ARCHITECTURE ============ -->
+<section id="architecture">
+  <div class="wrap">
+    <div class="eyebrow reveal">Architecture</div>
+    <h2 class="reveal">Five paths, one source of truth</h2>
+    <p class="section-lede reveal">The system splits into five independent paths. Labels A to E are separate flows, not one sequence. Firestore is the single store for deals, versions, settings and the audit log.</p>
+
+    <div class="card diagram reveal">
+      <svg viewBox="0 0 1000 830" role="img" aria-label="Architecture diagram showing build, sync, advise, publish and deploy paths across the outside world, the Google Cloud project, and third-party services">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1A3F7A"/></marker>
+          <marker id="ahl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5B95F0"/></marker>
+          <linearGradient id="pipe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0F2C5C"/><stop offset="1" stop-color="#061430"/></linearGradient>
+          <filter id="sh" x="-10%" y="-10%" width="120%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0A1F44" flood-opacity=".12"/></filter>
+        </defs>
+
+        <!-- zones -->
+        <text x="20" y="22" font-size="11" font-weight="700" letter-spacing="1.5" fill="#6A7C98">OUTSIDE GCP</text>
+        <rect x="190" y="32" width="570" height="786" rx="14" fill="#F3F8FF" stroke="#93BDF7" stroke-dasharray="6 5"/>
+        <text x="206" y="22" font-size="11" font-weight="700" letter-spacing="1.5" fill="#2F6FD6">GCP PROJECT ¬∑ DEFINED IN TERRAFORM, DEPLOYED BY GITHUB ACTIONS</text>
+        <rect x="780" y="32" width="205" height="664" rx="14" fill="#E3EEFD" stroke="#C7DDFB"/>
+        <text x="796" y="22" font-size="11" font-weight="700" letter-spacing="1.5" fill="#6A7C98">THIRD PARTIES</text>
+
+        <!-- lane labels -->
+        <g font-size="11" font-weight="700" letter-spacing="1.2" fill="#0F2C5C">
+          <text x="20" y="60">A ¬∑ BUILD</text>
+          <text x="20" y="232">B ¬∑ SYNC</text>
+          <text x="20" y="372">C ¬∑ ADVISE</text>
+          <text x="20" y="512">D ¬∑ PUBLISH</text>
+          <text x="20" y="738">E ¬∑ DEPLOY</text>
+        </g>
+        <g font-size="10.5" fill="#6A7C98">
+          <text x="20" y="75">every edit, live</text>
+          <text x="20" y="247">every morning</text>
+          <text x="20" y="387">on request, per fee sheet</text>
+          <text x="20" y="527">on approval and Final</text>
+          <text x="20" y="753">on merge to main</text>
+        </g>
+        <line x1="190" y1="205" x2="760" y2="205" stroke="#C7DDFB"/>
+        <line x1="190" y1="340" x2="760" y2="340" stroke="#C7DDFB"/>
+        <line x1="190" y1="480" x2="760" y2="480" stroke="#C7DDFB"/>
+        <line x1="190" y1="710" x2="760" y2="710" stroke="#C7DDFB"/>
+
+        <!-- A boxes -->
+        <g filter="url(#sh)">
+          <rect x="20" y="100" width="150" height="64" rx="10" fill="#fff" stroke="#C7DDFB"/>
+          <rect x="215" y="100" width="170" height="64" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="415" y="100" width="140" height="64" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="585" y="92" width="155" height="80" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="800" y="68" width="165" height="70" rx="10" fill="#fff" stroke="#93BDF7"/>
+        </g>
+        <g text-anchor="middle">
+          <text x="95" y="127" font-size="13" font-weight="700" fill="#0B1B36">Person</text>
+          <text x="95" y="145" font-size="10.5" fill="#6A7C98">browser, signed in</text>
+          <text x="300" y="127" font-size="13" font-weight="700" fill="#0B1B36">Cloud Run ¬∑ API</text>
+          <text x="300" y="145" font-size="10.5" fill="#6A7C98">behind IAP, serves the app</text>
+          <text x="485" y="127" font-size="13" font-weight="700" fill="#0B1B36">Calc engine</text>
+          <text x="485" y="145" font-size="10.5" fill="#6A7C98">ratecard stays here</text>
+          <text x="662" y="122" font-size="13" font-weight="700" fill="#0B1B36">Firestore</text>
+          <text x="662" y="140" font-size="10.5" fill="#6A7C98">deals, versions, settings</text>
+          <text x="662" y="154" font-size="10.5" fill="#6A7C98">+ audit log</text>
+          <text x="882" y="96" font-size="13" font-weight="700" fill="#0B1B36">Google sign-in</text>
+          <text x="882" y="114" font-size="10.5" fill="#6A7C98">IAP identity</text>
+          <text x="882" y="128" font-size="10.5" fill="#6A7C98">+ admin group</text>
+        </g>
+        <g stroke="#1A3F7A" stroke-width="1.6" fill="none" marker-end="url(#ah)">
+          <path d="M170 132 H211"/>
+          <path d="M385 132 H411"/>
+          <path d="M555 132 H581"/>
+          <path d="M300 100 C 300 50, 720 46, 796 92"/>
+        </g>
+        <path d="M610 172 C 610 192, 110 194, 95 168" stroke="#5B95F0" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#ahl)"/>
+        <text x="350" y="196" font-size="10.5" fill="#2F6FD6" text-anchor="middle">live updates to everyone on the sheet</text>
+
+        <!-- B boxes -->
+        <g filter="url(#sh)">
+          <rect x="215" y="240" width="160" height="52" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="405" y="230" width="210" height="72" rx="12" fill="url(#pipe)"/>
+          <rect x="800" y="238" width="165" height="56" rx="10" fill="#fff" stroke="#93BDF7"/>
+        </g>
+        <g text-anchor="middle">
+          <text x="295" y="262" font-size="13" font-weight="700" fill="#0B1B36">Cloud Scheduler</text>
+          <text x="295" y="279" font-size="10.5" fill="#6A7C98">OIDC identity token</text>
+          <text x="510" y="258" font-size="13.5" font-weight="700" fill="#FFFFFF">Cloud Run Job ¬∑ Sync</text>
+          <text x="510" y="276" font-size="10.5" fill="#E3EEFD">clients, deals, owners</text>
+          <text x="510" y="292" font-size="10" fill="#93BDF7">no HTTP surface</text>
+          <text x="882" y="262" font-size="13" font-weight="700" fill="#0B1B36">CRM</text>
+          <text x="882" y="279" font-size="10.5" fill="#6A7C98">read-only token</text>
+        </g>
+        <g stroke="#1A3F7A" stroke-width="1.6" fill="none" marker-end="url(#ah)">
+          <path d="M375 266 H401"/>
+          <path d="M615 266 H796"/>
+          <path d="M600 230 C 640 210, 700 200, 712 176"/>
+        </g>
+        <text x="705" y="258" font-size="10.5" fill="#2F6FD6" text-anchor="middle">reads deals</text>
+
+        <!-- C boxes (advise) -->
+        <g filter="url(#sh)">
+          <rect x="215" y="368" width="250" height="96" rx="12" fill="url(#pipe)"/>
+          <rect x="800" y="358" width="165" height="52" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="800" y="418" width="165" height="52" rx="10" fill="#fff" stroke="#93BDF7"/>
+        </g>
+        <g text-anchor="middle">
+          <text x="340" y="392" font-size="14" font-weight="700" fill="#FFFFFF">Cloud Run ¬∑ API</text>
+          <text x="340" y="409" font-size="10.5" fill="#93BDF7">team advisor</text>
+          <text x="340" y="432" font-size="11" fill="#E3EEFD">Past fee sheets and outcomes</text>
+          <text x="340" y="451" font-size="11" fill="#E3EEFD">Who has time free, at what level</text>
+          <text x="882" y="380" font-size="13" font-weight="700" fill="#0B1B36">Claude</text>
+          <text x="882" y="397" font-size="10.5" fill="#6A7C98">team suggestions</text>
+          <text x="882" y="440" font-size="13" font-weight="700" fill="#0B1B36">Resourcing tools</text>
+          <text x="882" y="457" font-size="10.5" fill="#6A7C98">planned capacity, time tracked</text>
+        </g>
+        <g stroke="#1A3F7A" stroke-width="1.6" fill="none" marker-end="url(#ah)">
+          <path d="M465 392 C 620 392, 660 384, 796 384"/>
+          <path d="M465 440 C 620 440, 660 444, 796 444"/>
+        </g>
+        <text x="630" y="378" font-size="10.5" fill="#2F6FD6" text-anchor="middle">similar deals in, suggestions out</text>
+        <text x="630" y="456" font-size="10.5" fill="#2F6FD6" text-anchor="middle">reads capacity</text>
+
+        <!-- D boxes (publish) -->
+        <g filter="url(#sh)">
+          <rect x="215" y="512" width="250" height="168" rx="12" fill="url(#pipe)"/>
+          <rect x="800" y="502" width="165" height="52" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="800" y="566" width="165" height="52" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="800" y="630" width="165" height="52" rx="10" fill="#fff" stroke="#93BDF7"/>
+        </g>
+        <g text-anchor="middle">
+          <text x="340" y="540" font-size="14" font-weight="700" fill="#FFFFFF">Cloud Run ¬∑ API</text>
+          <text x="340" y="558" font-size="10.5" fill="#93BDF7">on approval request and Final</text>
+          <text x="340" y="586" font-size="11" fill="#E3EEFD">Post approval request</text>
+          <text x="340" y="606" font-size="11" fill="#E3EEFD">Lock the Final version</text>
+          <text x="340" y="626" font-size="11" fill="#E3EEFD">Fill the tracker row</text>
+          <text x="340" y="646" font-size="11" fill="#E3EEFD">Copy Final to the shared drive</text>
+          <text x="340" y="668" font-size="10" fill="#93BDF7">never sends anything to a client</text>
+          <text x="882" y="524" font-size="13" font-weight="700" fill="#0B1B36">Slack</text>
+          <text x="882" y="541" font-size="10.5" fill="#6A7C98">review channel bot</text>
+          <text x="882" y="588" font-size="13" font-weight="700" fill="#0B1B36">Notion</text>
+          <text x="882" y="605" font-size="10.5" fill="#6A7C98">deal tracker row</text>
+          <text x="882" y="652" font-size="13" font-weight="700" fill="#0B1B36">Google Drive</text>
+          <text x="882" y="669" font-size="10.5" fill="#6A7C98">view-only Final copies</text>
+        </g>
+        <path d="M465 540C620 540 660 528 796 528" stroke="#1A3F7A" stroke-width="1.6" fill="none" marker-start="url(#ah)" marker-end="url(#ah)"/>
+        <text x="630" y="524" font-size="10.5" fill="#2F6FD6" text-anchor="middle">‚úÖ reactions come back as approvals</text>
+        <g stroke="#1A3F7A" stroke-width="1.6" fill="none" marker-end="url(#ah)">
+          <path d="M465 600C620 600 660 592 796 592"/>
+          <path d="M465 645C620 645 660 656 796 656"/>
+        </g>
+
+        <!-- E boxes (deploy) -->
+        <g filter="url(#sh)">
+          <rect x="20" y="768" width="150" height="44" rx="10" fill="#fff" stroke="#C7DDFB"/>
+          <rect x="215" y="768" width="200" height="44" rx="10" fill="#fff" stroke="#93BDF7"/>
+        </g>
+        <g text-anchor="middle">
+          <text x="95" y="787" font-size="12.5" font-weight="700" fill="#0B1B36">GitHub Actions</text>
+          <text x="95" y="802" font-size="10" fill="#6A7C98">no stored keys</text>
+          <text x="315" y="787" font-size="12.5" font-weight="700" fill="#0B1B36">Terraform</text>
+          <text x="315" y="802" font-size="10" fill="#6A7C98">locked, versioned state</text>
+        </g>
+        <path d="M170 790H211" stroke="#1A3F7A" stroke-width="1.6" fill="none" marker-end="url(#ah)"/>
+        <path d="M415 790H460" stroke="#5B95F0" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#ahl)"/>
+        <text x="470" y="786" font-size="11" fill="#2F6FD6">provisions every resource in the project</text>
+        <text x="470" y="802" font-size="10.5" fill="#6A7C98">a weekly routine opens a PR when the role list changes</text>
+      </svg>
+    </div>
+
+    <div class="paths">
+      <div class="card path reveal">
+        <span class="tag"><i>A</i>Build</span>
+        <h4>Every edit, live</h4>
+        <p>The browser sends small, typed edits ("set this row's FTE to 50%") rather than whole documents. The API checks each one against the sheet's rules, recalculates, saves to Firestore and pushes the result to everyone else on the sheet.</p>
+      </div>
+      <div class="card path reveal">
+        <span class="tag"><i>B</i>Sync</span>
+        <h4>Every morning</h4>
+        <p>Cloud Scheduler starts a Cloud Run Job with an OIDC identity. It reads clients, deals and owners from the CRM with a read-only token and updates Firestore. The job has no HTTP surface, and a person can also start a sync from the app.</p>
+      </div>
+      <div class="card path reveal">
+        <span class="tag"><i>C</i>Advise</span>
+        <h4>On request, per fee sheet</h4>
+        <p>The API gathers similar past fee sheets and how those accounts performed, and asks Claude what the new team is missing. It reads planned capacity and tracked time from the resourcing tools so suggestions come with real people who have room to take the work.</p>
+      </div>
+      <div class="card path reveal">
+        <span class="tag"><i>D</i>Publish</span>
+        <h4>On approval and Final</h4>
+        <p>The API posts approval requests to the review channel and reads ‚úÖ reactions back as approvals. On Final it locks the version, fills the deal's tracker row in Notion and copies the Final into a view-only shared drive.</p>
+      </div>
+      <div class="card path reveal">
+        <span class="tag"><i>E</i>Deploy</span>
+        <h4>On merge to main</h4>
+        <p>GitHub Actions authenticates to Google Cloud through Workload Identity Federation, with no stored keys. Terraform provisions every resource from locked, versioned state. A weekly routine checks the job architecture and opens a pull request when the role list changes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TECHNICAL ============ -->
+<section id="technical" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">Technical detail</div>
+    <h2 class="reveal">Under the hood</h2>
+
+    <div class="tech-grid" style="margin-top:28px">
+      <div class="card reveal">
+        <h4>Claude as a team advisor</h4>
+        <p>Claude reads the deal alongside past fee sheets for similar accounts (spend, channels, term) and how those accounts went afterwards. It suggests where a team tends to be thin or overbuilt, and explains each suggestion with the past deals behind it. Every suggestion goes through the same checks as a hand-made edit.</p>
+      </div>
+      <div class="card reveal">
+        <h4>Edits are operations, not documents</h4>
+        <p>The browser never saves a whole fee sheet. It sends one small operation at a time, and the server decides whether it is allowed: a Final version refuses all of them, and only admins can approve or change Settings. Because the rules live on the server, a modified browser can't get around them.</p>
+      </div>
+      <div class="card reveal">
+        <h4>Settings are versioned data</h4>
+        <p>The ratecard, exchange rates, job titles, tech costs and check thresholds are all data that admins edit in the app. Each save is a numbered version with a preview of what it would change on open fee sheets, and a generic upload accepts a new rate table in one go.</p>
+      </div>
+      <div class="card reveal">
+        <h4>Show the math</h4>
+        <p>Any role can be expanded to show every step from ratecard to fee, with the formula written out beside each number. Reviewers stopped asking "where did this come from?" because the answer is one click away.</p>
+      </div>
+    </div>
+
+    <h3 class="reveal">Pricing: a documented, deterministic formula</h3>
+    <div class="card formula reveal">
+      <div class="eq">
+        <span class="c"># calc.ts ¬∑ one team row</span><br>
+        <span class="k">bill rate</span>  = salary/hr √ó (1 + overhead) √∑ (1 ‚àí margin)<br>
+        <span class="k">hours</span>      = FTE √ó hours a year √ó term √∑ 12<br>
+        <span class="k">fee</span>        = bill rate √ó hours √ó FX<br>
+        <span class="k">staff cost</span> = raw cost/hr √ó hours √ó FX<br>
+        <span class="c"># the whole sheet</span><br>
+        <span class="k">CGM</span>        = 1 ‚àí staff cost √∑ team fee<br>
+        <span class="k">SCR</span>        = team fee √∑ staff cost<br>
+        <span class="k">ECR</span>        = team fee √∑ media spend over the term
+      </div>
+      <div class="why">
+        <p><strong>Margin divides, it doesn't multiply.</strong> Dividing by (1 ‚àí margin) means a 40% margin is 40% of the price, not a 40% markup on cost, which is what finance measures.</p>
+        <p><strong>Spend is always annual.</strong> Media spend is entered per year even on a short term, and the app converts it to the term, so ECR compares like with like.</p>
+        <p><strong>ECR has a benchmark.</strong> The effective commission rate is checked against a stepped benchmark by annual spend band, because what counts as reasonable falls as spend grows.</p>
+      </div>
+    </div>
+
+    <h3 class="reveal">Three commercial models, one team</h3>
+    <div class="card models reveal">
+      <div class="model">
+        <div class="lbl">FTE</div>
+        <h4>Fixed fee for the team</h4>
+        <p>The client pays for the people, whatever happens to spend.</p>
+        <div class="mbar"><i class="fx" style="width:100%"></i></div>
+      </div>
+      <div class="model">
+        <div class="lbl">Hybrid</div>
+        <h4>Retainer plus commission</h4>
+        <p>Leadership and shared roles on a fixed retainer; execution on a commission of spend.</p>
+        <div class="mbar"><i class="fx" style="width:45%"></i><i class="cm" style="width:55%"></i></div>
+      </div>
+      <div class="model">
+        <div class="lbl">Commission</div>
+        <h4>All on spend</h4>
+        <p>Allowed, but flagged: the client team should sit on a fixed fee.</p>
+        <div class="mbar"><i class="cm" style="width:100%"></i></div>
+      </div>
+    </div>
+    <div class="legend reveal" style="margin-top:12px">
+      <span><i style="background:var(--navy-700)"></i>Fixed fee</span>
+      <span><i style="background:var(--blue-300)"></i>Commission on media spend</span>
+    </div>
+
+    <h3 class="reveal">Privacy and security controls</h3>
+    <ul class="checks">
+      <li class="card reveal"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span><div><strong>Cost data stays on the server</strong>The ratecard and salary data are read only by the API. Non-admins never receive them, and real rates are never committed to the repository.</div></li>
+      <li class="card reveal"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span><div><strong>Signed in, every request</strong>Identity-Aware Proxy sits in front of the app, so only signed-in company accounts reach it, and an admin group controls Settings.</div></li>
+      <li class="card reveal"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span><div><strong>Final means final</strong>A locked version refuses every edit on the server, not just in the interface. Changing a Final always creates a new version.</div></li>
+      <li class="card reveal"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span><div><strong>Everything audited</strong>Every edit, approval and settings change is written to an audit log with who made it and when.</div></li>
+      <li class="card reveal"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span><div><strong>Nothing goes to a client</strong>The app files and exports internally. A person still decides what is sent, through the existing approval process.</div></li>
+      <li class="card reveal"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span><div><strong>Formal sign-off</strong>Threat-modelled and approved with the security team before launch, with secrets in Secret Manager and infrastructure following the platform team's house pattern.</div></li>
+    </ul>
+
+    <div class="tech-grid" style="margin-top:44px">
+      <div class="card reveal">
+        <h4>Rules first, then Claude</h4>
+        <p>"Draft a first team" uses the same resourcing principles as the checks, so a draft has nothing for the checks to flag as an error. Each channel gets a pod sized by its own spend; shared roles are sized by the total. With a target fee or ECR, the pods scale to meet it, but never below the minimum role size. If the smallest team the rules allow still costs more than the target, the draft says so and keeps to the rules. Claude then works on top of that floor, so its suggestions start from a team that already passes the checks.</p>
+      </div>
+      <div class="card reveal">
+        <h4>Engineering practice</h4>
+        <p><strong>Pure logic separated from I/O.</strong> Storage has an in-memory version and a Firestore version behind the same interface, so the whole app runs on a laptop with made-up rates and no credentials.</p>
+        <p><strong>Automated tests</strong> cover the calculations, the checks, the first-draft rules, exports, approvals, the CRM sync and the Firestore security rules (against the emulator).</p>
+        <p><strong>Infrastructure as code.</strong> Every resource is in Terraform and deployed through GitHub Actions.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ OUTPUT ============ -->
+<section id="output">
+  <div class="wrap">
+    <div class="eyebrow reveal">Output</div>
+    <h2 class="reveal">What people actually see</h2>
+    <p class="section-lede reveal">The client, people and numbers below are invented, and the rates are sample values, so no real pricing appears here. The layouts are the app's own.</p>
+
+    <div class="output-item reveal" style="margin-top:28px">
+      <h3><span class="n">1</span>The editor</h3>
+      <p>One view, three zones. Inputs on the left, the team in the middle, and on the right only what ends up on the fee sheet: the fee, the ratios, the checks band and approvals.</p>
+      <div class="window">
+        <div class="window-bar"><i></i><i></i><i></i><span>fee sheet ¬∑ Northwind Outdoors ¬∑ v3 draft</span></div>
+        <div class="editor">
+          <div class="ed-left">
+            <div class="f"><label>Term</label><div class="in">12 months</div></div>
+            <div class="f"><label>Currency</label><div class="in">USD</div></div>
+            <div class="f"><label>Commercial model</label><div class="seg"><span class="on">FTE</span><span>Hybrid</span><span>Comm.</span></div></div>
+            <div class="f"><label>Media spend a year</label>
+              <div class="spend"><span>Paid Search</span><b>$2.4M</b><span>Paid Social</span><b>$1.6M</b><span>Total</span><b>$4.0M</b></div>
+            </div>
+          </div>
+          <div class="ed-mid">
+            <div class="hd"><strong>Team</strong><span class="btn">Draft a first team</span></div>
+            <table class="team">
+              <thead><tr><th>Role</th><th>Location</th><th class="r">Level</th><th class="r">FTE</th><th class="r">Fee</th></tr></thead>
+              <tbody>
+                <tr class="grp"><td colspan="5">Client leadership</td></tr>
+                <tr><td>Client Lead</td><td><span class="loc">Onshore</span></td><td class="r">L5</td><td class="r">30%</td><td class="r">$62,400</td></tr>
+                <tr class="grp"><td colspan="5">Paid Search</td></tr>
+                <tr><td>Paid Search Lead</td><td><span class="loc">Onshore</span></td><td class="r">L4</td><td class="r">50%</td><td class="r">$75,000</td></tr>
+                <tr><td>Paid Search Executive</td><td><span class="loc off">Offshore</span></td><td class="r">L2</td><td class="r">100%</td><td class="r">$54,000</td></tr>
+                <tr class="grp"><td colspan="5">Paid Social</td></tr>
+                <tr><td>Paid Social Lead</td><td><span class="loc">Onshore</span></td><td class="r">L4</td><td class="r">40%</td><td class="r">$60,000</td></tr>
+                <tr class="grp"><td colspan="5">Analytics</td></tr>
+                <tr><td>Analyst</td><td><span class="loc off">Offshore</span></td><td class="r">L1</td><td class="r">50%</td><td class="r">$21,600</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="ed-right">
+            <div class="feebox"><small>Team fee</small><div class="big">$273,000</div><div class="sub">$22,750 a month ¬∑ 2.7 FTE</div></div>
+            <div class="kpis">
+              <div><small>CGM</small><b>61%</b></div>
+              <div><small>ECR</small><b>6.8%</b></div>
+              <div><small>SCR</small><b>2.6x</b></div>
+            </div>
+            <div class="band warn"><b>1 warning</b> No planner on a two-channel account</div>
+            <div class="band ok"><b>All errors clear</b> Ready for approval</div>
+            <div class="appr"><div><span>Commercial approval</span><span>Pending</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="output-item reveal" style="margin-top:48px">
+      <h3><span class="n">2</span>Team suggestions from Claude</h3>
+      <p>Suggestions sit beside the team, each with the reason and the past deals behind it, and the people who could take the role. One click adds a suggestion; nothing changes until someone clicks.</p>
+      <div class="window">
+        <div class="window-bar"><i></i><i></i><i></i><span>fee sheet ¬∑ Northwind Outdoors ¬∑ team suggestions</span></div>
+        <div class="advisor">
+          <div class="adv-head"><span class="spark">‚ú¶</span><div><b>Compared with 9 similar accounts</b><small>$3M to $6M a year ¬∑ search and social ¬∑ 12-month terms</small></div></div>
+          <div class="sugg">
+            <div class="sugg-main"><span class="pill add">Add</span><div><b>Planner ¬∑ Onshore ¬∑ L3 ¬∑ 20%</b><p>7 of the 9 similar accounts added a planner within six months, usually after the first quarterly plan ran late.</p></div></div>
+            <div class="people"><small>Time free from January</small><span class="person">J. Morales ¬∑ 40%</span><span class="person">K. Osei ¬∑ 25%</span></div>
+            <span class="btn">Add to team</span>
+          </div>
+          <div class="sugg">
+            <div class="sugg-main"><span class="pill chg">Adjust</span><div><b>Paid Social Lead ¬∑ 40% ‚Üí 50%</b><p>Social leads on comparable spend tracked about half their time to the account, against 40% planned.</p></div></div>
+            <div class="people"><small>Current lead has room</small><span class="person">A. Rivera ¬∑ 15% free</span></div>
+            <span class="btn">Apply</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="output-grid" style="margin-top:48px">
+      <div class="output-item reveal">
+        <h3><span class="n">3</span>The approval request</h3>
+        <p>One structured post per request, with a note for the approver and the context they need to decide without opening the app. A ‚úÖ reaction is the approval.</p>
+        <div class="window">
+          <div class="window-bar"><i></i><i></i><i></i><span>#commercial-review</span></div>
+          <div class="chat">
+            <div class="msg">
+              <div class="avatar">FS</div>
+              <div style="flex:1;min-width:0">
+                <div class="who">Fee Sheet Builder<span>APP</span><em>10:42</em></div>
+                <div class="att">
+                  <div class="t">Northwind Outdoors ¬∑ v3 ¬∑ ready for approval</div>
+                  <dl>
+                    <dt>Deal</dt><dd>Renegotiation, 12 months</dd>
+                    <dt>Team fee</dt><dd>$273,000</dd>
+                    <dt>Media spend</dt><dd>$4.0M a year</dd>
+                    <dt>CGM ¬∑ ECR ¬∑ SCR</dt><dd>61% ¬∑ 6.8% ¬∑ 2.6x</dd>
+                    <dt>Checks</dt><dd>1 warning, no errors</dd>
+                  </dl>
+                  <div class="note"><strong>Note:</strong> No planner for now. The client runs planning in-house through Q1, and we revisit at the Q2 review.</div>
+                </div>
+                <div class="reacts"><span class="react">‚úÖ 1</span><span class="react">üëÄ 2</span></div>
+                <div class="reply">Approval recorded in the app. Anyone on the deal can now mark v3 Final.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="output-item reveal">
+        <h3><span class="n">4</span>Show the math</h3>
+        <p>Expanding a role walks from ratecard to fee, one step per line, with the formula beside each number. Sample rates shown.</p>
+        <div class="window terminal">
+          <div class="window-bar"><i></i><i></i><i></i><span>Paid Search Lead ¬∑ Onshore ¬∑ L4 ¬∑ 50%</span></div>
+<pre><span class="t-c"># sample rates, not a real ratecard</span>
+<span class="t-k">Ratecard salary / hr</span>  <span class="t-x">Onshore L4</span>              40.00
+<span class="t-k">Raw cost / hr</span>         <span class="t-x">Onshore L4</span>              30.00
+<span class="t-k">Plus overhead</span>         √ó (1 + 25%)             50.00
+<span class="t-k">Bill rate / hr</span>        √∑ (1 ‚àí 40% margin)      83.33
+<span class="t-k">Hours</span>                 50% √ó 1,800 √ó 12 √∑ 12     900
+<span class="t-k">Fee over the term</span>     bill rate √ó hours  <span class="t-tot">$75,000</span>
+<span class="t-k">Staff cost</span>            raw cost √ó hours   $27,000
+<span class="t-ok">CGM for this role</span>     1 ‚àí cost √∑ fee        <span class="t-tot">64.0%</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ IMPACT ============ -->
+<section id="impact" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">Key impact</div>
+    <h2 class="reveal">What changed</h2>
+
+
+    <div class="impact">
+      <div class="card lead wide reveal"><div class="big">Accurate</div><h4>Every fee sheet priced the same way, from the same rates</h4><p>A ratecard or exchange rate change is made once in Settings and applies everywhere, with a preview of its effect before saving.</p></div>
+      <div class="card wide reveal"><div class="big">Findable</div><h4>One place for every Final</h4><p>The tracker row fills itself and a view-only copy lands in the shared drive, so "which version did we send?" has one answer.</p></div>
+      <div class="card reveal"><div class="big">Faster</div><h4>A first team in one click</h4><p>The rules-based draft gives a compliant starting point instead of a blank sheet.</p></div>
+      <div class="card reveal"><div class="big">Visible</div><h4>Review built in</h4><p>Checks, approvals and the reasoning behind each number sit on the sheet, so review time goes on judgement rather than arithmetic.</p></div>
+      <div class="card reveal"><div class="big">Smarter</div><h4>Teams built on what worked</h4><p>Claude turns past deals into suggestions and finds people with time free, so a team is shaped by evidence and staffable from day one.</p></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span><strong>Fee Sheet Builder</strong> ¬∑ 2026</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  root.classList.add('js');
+
+  var bar = document.getElementById('progress');
+  function onScroll() {
+    var h = root.scrollHeight - root.clientHeight;
+    bar.style.width = (h > 0 ? (root.scrollTop / h) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  if (!('IntersectionObserver' in window)) {
+    document.querySelectorAll('.reveal').forEach(function (e) { e.classList.add('in'); });
+    return;
+  }
+
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      en.target.classList.add('in');
+      io.unobserve(en.target);
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(function (e) { io.observe(e); });
+
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav a.link'));
+  var map = {};
+  links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+  var so = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (en.isIntersecting && map[en.target.id]) {
+        links.forEach(function (a) { a.classList.remove('active'); });
+        map[en.target.id].classList.add('active');
+      }
+    });
+  }, { rootMargin: '-45% 0px -50% 0px' });
+  document.querySelectorAll('main section[id]').forEach(function (s) { so.observe(s); });
+})();
+</script>
+</body>
+</html>
