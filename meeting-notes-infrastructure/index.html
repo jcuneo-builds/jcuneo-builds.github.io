@@ -1,0 +1,935 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meeting Notes Infrastructure</title>
+<meta name="description" content="Turning every client meeting into a filed, scored, searchable record, automatically and with consent.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #061430;
+    --navy-800: #0A1F44;
+    --navy-700: #0F2C5C;
+    --navy-600: #1A3F7A;
+    --blue-500: #2F6FD6;
+    --blue-400: #5B95F0;
+    --blue-300: #93BDF7;
+    --blue-200: #C7DDFB;
+    --blue-100: #E3EEFD;
+    --blue-50:  #F3F8FF;
+    --ink: #0B1B36;
+    --ink-2: #3A4D6B;
+    --ink-3: #6A7C98;
+    --line: #D6E3F5;
+    --white: #FFFFFF;
+    --radius: 14px;
+    --radius-sm: 10px;
+    --shadow-sm: 0 1px 2px rgba(10,31,68,.06), 0 2px 8px rgba(10,31,68,.05);
+    --shadow: 0 1px 2px rgba(10,31,68,.06), 0 12px 32px -8px rgba(10,31,68,.18);
+    --page: 1120px;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+  body {
+    margin: 0;
+    background: var(--blue-50);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .wrap { max-width: var(--page); margin: 0 auto; padding: 0 28px; }
+  a { color: var(--blue-500); }
+  strong { font-weight: 600; color: var(--ink); }
+  p { margin: 0 0 16px; color: var(--ink-2); }
+  h1, h2, h3, h4 { margin: 0; color: var(--ink); letter-spacing: -0.02em; }
+  h2 { font-size: clamp(30px, 4vw, 42px); line-height: 1.1; font-weight: 700; margin-bottom: 18px; }
+  h3 { font-size: 22px; line-height: 1.3; font-weight: 600; margin: 44px 0 12px; }
+  code {
+    font-family: var(--mono); font-size: 0.82em;
+    background: var(--blue-100); color: var(--navy-700);
+    border: 1px solid var(--blue-200); border-radius: 6px; padding: 1px 6px;
+    word-break: break-word;
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 12.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--blue-500); margin-bottom: 14px;
+  }
+  .eyebrow::before { content: ""; width: 22px; height: 2px; background: currentColor; border-radius: 2px; }
+  .section-lede { font-size: 19px; max-width: 760px; }
+
+  /* ---------- Progress + nav ---------- */
+  .progress { position: fixed; top: 0; left: 0; height: 3px; width: 0; z-index: 60;
+    background: linear-gradient(90deg, var(--blue-400), var(--blue-200)); }
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(6,20,48,.82); backdrop-filter: saturate(160%) blur(14px); -webkit-backdrop-filter: saturate(160%) blur(14px);
+    border-bottom: 1px solid rgba(147,189,247,.14);
+  }
+  .nav .wrap { display: flex; align-items: center; gap: 24px; height: 60px; }
+  .nav .brand { color: var(--white); font-weight: 600; font-size: 15px; white-space: nowrap; display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .nav .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--blue-300); box-shadow: 0 0 0 4px rgba(147,189,247,.18); }
+  .nav ul { list-style: none; display: flex; gap: 4px; margin: 0 0 0 auto; padding: 0; overflow-x: auto; scrollbar-width: none; }
+  .nav ul::-webkit-scrollbar { display: none; }
+  .nav a.link { display: block; padding: 6px 11px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: rgba(227,238,253,.72); text-decoration: none; white-space: nowrap; transition: background .2s, color .2s; }
+  .nav a.link:hover { color: var(--white); background: rgba(147,189,247,.12); }
+  .nav a.link.active { color: var(--white); background: rgba(147,189,247,.2); }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    position: relative; overflow: hidden; color: var(--white);
+    background:
+      radial-gradient(900px 480px at 85% -10%, rgba(91,149,240,.42), transparent 60%),
+      radial-gradient(700px 420px at -10% 110%, rgba(47,111,214,.35), transparent 60%),
+      linear-gradient(180deg, var(--navy-900), var(--navy-800));
+    padding: 96px 0 72px;
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(147,189,247,.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(147,189,247,.08) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at 60% 30%, #000 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at 60% 30%, #000 30%, transparent 75%);
+  }
+  .hero .wrap { position: relative; }
+  .status {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 13px; font-weight: 500; color: var(--blue-100);
+    padding: 6px 14px 6px 10px; border-radius: 999px;
+    background: rgba(147,189,247,.12); border: 1px solid rgba(147,189,247,.28);
+  }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: #7FD3FF; position: relative; }
+  .pulse::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid #7FD3FF; opacity: .6; animation: ping 2s infinite; }
+  @keyframes ping { 0% { transform: scale(.6); opacity: .7; } 100% { transform: scale(1.8); opacity: 0; } }
+  .hero h1 { color: var(--white); font-size: clamp(42px, 7vw, 84px); line-height: 1.02; font-weight: 800; letter-spacing: -0.035em; margin: 24px 0 22px; max-width: 900px; }
+  .hero h1 span { background: linear-gradient(90deg, var(--blue-200), var(--blue-400)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero .lede { font-size: clamp(18px, 2vw, 22px); line-height: 1.5; color: rgba(227,238,253,.85); max-width: 720px; margin: 0; }
+  .meta {
+    margin-top: 48px; display: grid; grid-template-columns: repeat(3, 1fr);
+    border: 1px solid rgba(147,189,247,.2); border-radius: var(--radius);
+    background: rgba(10,31,68,.55); backdrop-filter: blur(8px); overflow: hidden;
+  }
+  .meta div { padding: 18px 22px; border-right: 1px solid rgba(147,189,247,.14); border-bottom: 1px solid rgba(147,189,247,.14); }
+  .meta div:nth-child(3n) { border-right: 0; }
+  .meta div:nth-last-child(-n+3) { border-bottom: 0; }
+  .meta dt { font-size: 11.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--blue-300); margin-bottom: 6px; }
+  .meta dd { margin: 0; font-size: 15px; line-height: 1.5; color: var(--blue-50); }
+
+  /* ---------- Sections ---------- */
+  section { padding: 96px 0; }
+  section.alt { background: var(--white); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .card { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+
+  /* ---------- Stats ---------- */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 36px; }
+  .stat { padding: 22px 22px 20px; position: relative; overflow: hidden; transition: transform .25s, box-shadow .25s; }
+  .stat:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .stat .num { font-size: 42px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; color: var(--navy-800); font-variant-numeric: tabular-nums; }
+  .stat .label { font-size: 14.5px; line-height: 1.45; color: var(--ink-2); margin-top: 8px; }
+  .stat .src { font-size: 12px; color: var(--ink-3); margin-top: 12px; font-family: var(--mono); }
+  .stat.feature { background: linear-gradient(150deg, var(--navy-700), var(--navy-900)); border-color: var(--navy-700); }
+  .stat.feature .num, .stat.feature .label { color: var(--white); }
+  .stat.feature .src { color: var(--blue-300); }
+  .stat.feature::after { content: ""; position: absolute; right: -40px; top: -40px; width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle, rgba(91,149,240,.45), transparent 70%); }
+
+  .split { margin-top: 20px; padding: 24px; }
+  .split-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .split-head strong { font-size: 15px; }
+  .split-head span { font-size: 13px; color: var(--ink-3); }
+  .bar { display: flex; height: 14px; border-radius: 999px; overflow: hidden; background: var(--blue-100); }
+  .bar i { display: block; height: 100%; width: 0; transition: width 1.2s cubic-bezier(.2,.7,.2,1); }
+  .bar .b1 { background: var(--navy-700); }
+  .bar .b2 { background: var(--blue-300); }
+  .bar .b3 { background: var(--blue-500); }
+  .legend { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 14px; font-size: 13.5px; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  /* ---------- Before / after ---------- */
+  .ba { display: grid; grid-template-columns: 1fr 56px 1fr; align-items: stretch; margin-top: 36px; }
+  .ba .card { padding: 28px; }
+  .ba h4 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; margin-bottom: 16px; color: var(--ink-3); }
+  .ba .after { background: linear-gradient(160deg, var(--navy-800), var(--navy-900)); border-color: var(--navy-700); box-shadow: var(--shadow); }
+  .ba .after h4 { color: var(--blue-300); }
+  .ba .after p { color: rgba(227,238,253,.82); }
+  .ba p { font-size: 15px; margin: 18px 0 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { font-size: 13.5px; font-weight: 500; padding: 6px 12px; border-radius: 999px; }
+  .chip.old { background: var(--blue-50); color: var(--ink-3); border: 1px dashed #B8C8E0; text-decoration: line-through; text-decoration-color: rgba(106,124,152,.5); }
+  .chip.new { background: rgba(147,189,247,.14); color: var(--blue-100); border: 1px solid rgba(147,189,247,.35); }
+  .chip.new.hi { background: var(--blue-300); color: var(--navy-900); border-color: var(--blue-300); }
+  .arrow { display: flex; align-items: center; justify-content: center; color: var(--blue-500); }
+  .arrow svg { width: 28px; height: 28px; }
+
+  .brief { margin-top: 28px; padding: 24px 28px; border-left: 4px solid var(--blue-500); border-radius: var(--radius-sm); background: var(--blue-100); }
+  .brief p { margin: 0; color: var(--ink); font-size: 17px; }
+
+  /* ---------- Principles ---------- */
+  .principles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 32px; }
+  .principle { padding: 28px; transition: transform .25s, box-shadow .25s; }
+  .principle:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--blue-100); color: var(--blue-500); margin-bottom: 18px; }
+  .icon svg { width: 22px; height: 22px; }
+  .principle h4 { font-size: 19px; font-weight: 600; margin-bottom: 8px; }
+  .principle p { font-size: 15.5px; margin: 0; }
+
+  /* ---------- Workflow ---------- */
+  .flow { margin-top: 32px; padding: 10px; }
+  .flow-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 14px 16px 10px; }
+  .flow-head small { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+  .flow-row { display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: center; padding: 14px 16px; border-radius: 12px; transition: background .2s; }
+  .flow-row:hover { background: var(--blue-50); }
+  .flow-row + .flow-row { border-top: 1px solid var(--line); }
+  .step { display: flex; align-items: center; gap: 14px; }
+  .step .n { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 10px; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+  .step.meta-only .n { background: var(--blue-100); color: var(--navy-700); border: 1px solid var(--blue-200); }
+  .step.reads .n { background: var(--blue-500); color: var(--white); }
+  .step.out .n { background: var(--navy-800); color: var(--white); }
+  .step b { display: block; font-size: 15.5px; font-weight: 600; line-height: 1.3; }
+  .step small { display: block; font-size: 12.5px; color: var(--ink-3); line-height: 1.35; }
+  .flow-row p { margin: 0; font-size: 15px; line-height: 1.55; }
+  .count { display: flex; align-items: baseline; gap: 8px; padding-left: 16px; border-left: 2px solid var(--blue-200); }
+  .count strong { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--navy-800); }
+  .count span { font-size: 13px; color: var(--ink-2); line-height: 1.3; }
+  .count code { font-size: 11px; display: block; margin-top: 2px; width: fit-content; }
+  .flow-row.final { background: linear-gradient(90deg, var(--blue-100), transparent); }
+  .flow-row.final .count strong { color: var(--blue-500); }
+  .divider { display: flex; align-items: center; gap: 14px; padding: 10px 16px; font-size: 12.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--blue-500); }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 0; border-top: 1.5px dashed var(--blue-300); }
+  .flow .legend { padding: 10px 16px 8px; }
+
+  /* ---------- Architecture ---------- */
+  .diagram { margin-top: 32px; padding: 18px; overflow-x: auto; }
+  .diagram svg { display: block; width: 100%; min-width: 820px; height: auto; font-family: 'Inter', system-ui, sans-serif; }
+  .paths { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 18px; }
+  .path { padding: 26px; }
+  .tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; letter-spacing: .04em; padding: 4px 12px; border-radius: 999px; background: var(--blue-100); color: var(--navy-700); margin-bottom: 14px; }
+  .tag i { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--navy-700); color: var(--white); font-style: normal; font-size: 11px; }
+  .path h4 { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .path p { font-size: 15px; margin: 0; }
+
+  /* ---------- Technical ---------- */
+  .tech-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .tech-grid .card { padding: 26px; }
+  .tech-grid h4 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+  .tech-grid p { font-size: 15.5px; margin: 0; }
+  .formula { display: grid; grid-template-columns: 1.1fr 1fr; gap: 0; overflow: hidden; margin-top: 18px; }
+  .formula .eq { white-space: nowrap; overflow-x: auto; background: var(--navy-900); color: var(--blue-100); padding: 26px 28px; font-family: var(--mono); font-size: 14px; line-height: 2; }
+  .formula .eq .k { color: var(--blue-300); }
+  .formula .eq .c { color: #7E93B5; }
+  .formula .why { padding: 26px 28px; }
+  .formula .why p { font-size: 15.5px; }
+  .formula .why p:last-child { margin: 0; }
+
+  .checks { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .checks li { display: flex; gap: 14px; padding: 20px; }
+  .checks li .tick { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 8px; background: var(--blue-100); color: var(--blue-500); display: grid; place-items: center; }
+  .checks li .tick svg { width: 14px; height: 14px; }
+  .checks li div { font-size: 15px; line-height: 1.55; color: var(--ink-2); }
+  .checks li strong { display: block; color: var(--ink); margin-bottom: 2px; }
+
+  /* ---------- Mock frames ---------- */
+  .output-grid { display: grid; grid-template-columns: 1fr 1.25fr; gap: 28px; align-items: start; margin-top: 28px; }
+  .output-item h3 { margin-top: 0; display: flex; align-items: center; gap: 12px; }
+  .output-item h3 .n { width: 30px; height: 30px; border-radius: 9px; background: var(--navy-800); color: var(--white); display: grid; place-items: center; font-size: 14px; font-weight: 700; }
+  .output-item > p { font-size: 15.5px; }
+  .window { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); background: var(--white); box-shadow: var(--shadow); }
+  .window-bar { display: flex; align-items: center; gap: 7px; padding: 11px 14px; background: var(--blue-50); border-bottom: 1px solid var(--line); }
+  .window-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--blue-200); }
+  .window-bar span { margin-left: 10px; font-size: 12px; color: var(--ink-3); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .consent { padding: 0; }
+  .consent-top { height: 72px; background: linear-gradient(120deg, var(--navy-800), var(--blue-500)); position: relative; }
+  .consent-top::after { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,.18) 1px, transparent 1px); background-size: 14px 14px; }
+  .consent-body { padding: 0 28px 26px; }
+  .consent-check { width: 56px; height: 56px; border-radius: 50%; background: var(--white); border: 4px solid var(--white); box-shadow: var(--shadow); display: grid; place-items: center; margin-top: -28px; position: relative; }
+  .consent-check div { width: 100%; height: 100%; border-radius: 50%; background: var(--blue-500); color: var(--white); display: grid; place-items: center; }
+  .consent-check svg { width: 22px; height: 22px; }
+  .consent h5 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 16px 0 4px; }
+  .consent .as { font-size: 14.5px; color: var(--ink-2); margin-bottom: 18px; }
+  .conn { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; background: var(--blue-50); border: 1px solid var(--blue-200); font-size: 14.5px; font-weight: 600; margin-bottom: 8px; }
+  .conn svg { width: 16px; height: 16px; color: var(--blue-500); }
+  .conn span { margin-left: auto; font-size: 12px; font-weight: 500; color: var(--blue-500); }
+  .consent-foot { border-top: 1px solid var(--line); padding: 16px 28px 20px; font-size: 13.5px; color: var(--ink-2); line-height: 1.55; }
+
+  .notion { padding: 26px 30px 28px; }
+  .crumb { font-size: 12.5px; color: var(--ink-3); margin-bottom: 8px; }
+  .notion h5 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 18px; }
+  .props { display: grid; grid-template-columns: 190px 1fr; row-gap: 7px; font-size: 14px; margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+  .props dt { color: var(--ink-3); }
+  .props dd { margin: 0; color: var(--ink); }
+  .pill { display: inline-block; font-size: 12px; font-weight: 500; padding: 1px 9px; border-radius: 6px; background: var(--blue-100); color: var(--navy-700); }
+  .pill.dark { background: var(--navy-700); color: var(--white); }
+  .score { font-weight: 700; }
+  .meter { display: inline-block; vertical-align: middle; width: 90px; height: 6px; border-radius: 9px; background: var(--blue-100); margin-left: 10px; overflow: hidden; }
+  .meter i { display: block; height: 100%; background: linear-gradient(90deg, var(--blue-400), var(--navy-700)); }
+  .notion h6 { font-size: 15px; font-weight: 700; margin: 0 0 8px; }
+  .notion ul { margin: 0 0 18px; padding-left: 20px; font-size: 14px; color: var(--ink-2); }
+  .notion ul li { margin-bottom: 4px; }
+  .todo { list-style: none; padding: 0 !important; }
+  .todo li { display: flex; gap: 10px; align-items: baseline; }
+  .todo li::before { content: ""; width: 13px; height: 13px; flex: 0 0 13px; border: 1.5px solid var(--blue-300); border-radius: 4px; transform: translateY(2px); }
+  .todo small { color: var(--ink-3); }
+
+  .terminal { background: var(--navy-900); border-color: #12284F; }
+  .terminal .window-bar { background: #0B1D3D; border-color: #12284F; }
+  .terminal .window-bar i { background: #22406F; }
+  .terminal .window-bar span { color: #7E93B5; }
+  .terminal pre { margin: 0; padding: 20px 22px 22px; font-family: var(--mono); font-size: 12.5px; line-height: 1.85; color: #C9D8F2; overflow-x: auto; }
+  .t-c { color: #6F86AD; }
+  .t-k { color: var(--blue-300); }
+  .t-x { color: #9FC3FF; }
+  .t-r { color: #E3EEFD; text-decoration: underline; text-decoration-color: rgba(147,189,247,.4); text-underline-offset: 3px; }
+  .t-ok { color: #7FD3FF; }
+  .t-tot { color: var(--white); font-weight: 500; }
+
+  /* ---------- Impact ---------- */
+  .impact { display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; margin-top: 32px; }
+  .impact .card { padding: 26px; grid-column: span 2; transition: transform .25s, box-shadow .25s; }
+  .impact .card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .impact .card.wide { grid-column: span 3; }
+  .impact .card.lead { background: linear-gradient(150deg, var(--navy-700), var(--navy-900)); border-color: var(--navy-700); }
+  .impact .card.lead h4, .impact .card.lead .big { color: var(--white); }
+  .impact .card.lead p { color: rgba(227,238,253,.82); }
+  .impact .big { font-size: 38px; font-weight: 700; letter-spacing: -0.03em; color: var(--navy-800); line-height: 1; margin-bottom: 14px; }
+  .impact h4 { font-size: 17px; font-weight: 600; margin-bottom: 6px; line-height: 1.35; }
+  .impact p { font-size: 15px; margin: 0; }
+
+  /* ---------- Next / lessons ---------- */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; }
+  .timeline { list-style: none; padding: 0; margin: 24px 0 0; position: relative; }
+  .timeline::before { content: ""; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: linear-gradient(var(--blue-400), var(--blue-100)); }
+  .timeline li { position: relative; padding: 0 0 24px 34px; font-size: 15.5px; color: var(--ink-2); }
+  .timeline li::before { content: ""; position: absolute; left: 0; top: 6px; width: 16px; height: 16px; border-radius: 50%; background: var(--white); border: 3px solid var(--blue-500); }
+  .timeline li strong { display: block; margin-bottom: 2px; }
+  .lessons { display: grid; gap: 14px; margin-top: 24px; }
+  .lesson { padding: 20px 22px; display: flex; gap: 16px; }
+  .lesson .q { font-size: 30px; line-height: .9; font-weight: 800; color: var(--blue-300); font-family: Georgia, serif; }
+  .lesson div { font-size: 15px; color: var(--ink-2); }
+  .lesson strong { display: block; margin-bottom: 2px; }
+
+  /* ---------- Footer ---------- */
+  footer { background: var(--navy-900); color: rgba(227,238,253,.7); padding: 40px 0; font-size: 14px; }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  footer strong { color: var(--white); }
+
+  /* ---------- Reveal ---------- */
+  .js .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
+  .js .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .js .reveal { opacity: 1; transform: none; transition: none; }
+    .pulse::after { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 980px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .principles, .paths { grid-template-columns: 1fr; }
+    .output-grid { grid-template-columns: 1fr; }
+    .impact { grid-template-columns: 1fr 1fr; }
+    .impact .card, .impact .card.wide { grid-column: span 1; }
+    .impact .card.lead { grid-column: span 2; }
+    .formula { grid-template-columns: 1fr; }
+    .flow-row { grid-template-columns: 200px 1fr; }
+    .flow-row .count { grid-column: 2; }
+  }
+  @media (max-width: 720px) {
+    body { font-size: 16px; }
+    .wrap { padding: 0 16px; }
+    section { padding: 64px 0; }
+    .hero { padding: 64px 0 48px; }
+    .nav .brand span.full { display: none; }
+    .meta { grid-template-columns: 1fr; }
+    .meta div { border-right: 0 !important; border-bottom: 1px solid rgba(147,189,247,.14) !important; }
+    .meta div:last-child { border-bottom: 0 !important; }
+    .stat .num { font-size: 34px; }
+    .ba { grid-template-columns: 1fr; gap: 0; }
+    .arrow { height: 44px; transform: rotate(90deg); }
+    .tech-grid, .checks, .cols { grid-template-columns: 1fr; }
+    .cols { gap: 24px; }
+    .impact { grid-template-columns: 1fr; }
+    .impact .card, .impact .card.wide, .impact .card.lead { grid-column: span 1; }
+    .flow-row { grid-template-columns: 1fr; gap: 10px; }
+    .flow-row .count { grid-column: 1; }
+    .props { grid-template-columns: 1fr; row-gap: 2px; }
+    .props dd { margin-bottom: 8px; }
+    .notion { padding: 22px; }
+    .consent-body, .consent-foot { padding-left: 20px; padding-right: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+
+<nav class="nav" aria-label="Sections">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="dot"></span><span class="full">Meeting Notes Infrastructure</span></a>
+    <ul>
+      <li><a class="link" href="#problem">Problem</a></li>
+      <li><a class="link" href="#solution">Solution</a></li>
+      <li><a class="link" href="#workflow">Workflow</a></li>
+      <li><a class="link" href="#architecture">Architecture</a></li>
+      <li><a class="link" href="#technical">Technical</a></li>
+      <li><a class="link" href="#output">Output</a></li>
+      <li><a class="link" href="#impact">Impact</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="status"><span class="pulse"></span>Live in production · NAMER and UK</div>
+    <h1>Meeting Notes <span>Infrastructure</span></h1>
+    <p class="lede">Turning every client meeting into a filed, scored, searchable record, automatically and with consent.</p>
+    <dl class="meta">
+      <div><dt>Organization</dt><dd>Global media agency (~1,000 people)</dd></div>
+      <div><dt>Timeline</dt><dd>July to November 2026. Internal MVP in August, client pilot live from September</dd></div>
+      <div><dt>Sponsors</dt><dd>COO and Global Operations leadership</dd></div>
+      <div><dt>Built by</dt><dd>Jen Cuneo</dd></div>
+      <div><dt>Stack</dt><dd>Python, Google Meet, Calendar and Docs APIs, Claude, Notion API, Cloud Run, Firestore, Terraform, GitHub Actions</dd></div>
+      <div><dt>Status</dt><dd>Live in production across NAMER and UK</dd></div>
+    </dl>
+  </div>
+</header>
+
+<main>
+
+
+<!-- ============ PROBLEM ============ -->
+<section id="problem" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">The problem</div>
+    <h2 class="reveal">Notes lived everywhere, and nowhere</h2>
+    <p class="section-lede reveal">The agency runs hundreds of client meetings every day on Google Meet. Before this project, the notes from those meetings lived wherever the person taking them happened to put them: a private Notion page, a personal Google Doc, a Gemini note sitting in one person's Drive, or nowhere at all.</p>
+
+    <div class="ba reveal">
+      <div class="card">
+        <h4>Before</h4>
+        <div class="chips">
+          <span class="chip old">Private Notion page</span>
+          <span class="chip old">Personal Google Doc</span>
+          <span class="chip old">Gemini note in one person's Drive</span>
+          <span class="chip old">Notebook</span>
+          <span class="chip old">Nowhere</span>
+        </div>
+        <p>Hundreds of client calls a day. Every account team keeps notes its own way, so there is no shared record, no way to see how a client relationship is trending, and nothing to read before the next call.</p>
+      </div>
+      <div class="arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+      <div class="card after">
+        <h4>After</h4>
+        <div class="chips">
+          <span class="chip new hi">Captured automatically</span>
+          <span class="chip new hi">Filtered for sensitivity</span>
+          <span class="chip new">One client database per region</span>
+          <span class="chip new">Sentiment, risk and expansion signals</span>
+          <span class="chip new">Action items with owners</span>
+        </div>
+        <p>Consent once. After every client meeting, the Gemini or Notion AI note is checked, analysed and filed against the right client in Notion, with no one lifting a finger.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:40px" class="reveal">
+      <p>That fragmentation had real costs. Account leads walked into calls without the context of the last three. Nobody could see whether a client relationship was warming up or cooling down until it showed up in revenue. Action items agreed on a call depended on someone remembering to write them down. And because every team had its own habits, there was no single place leadership could look to understand what clients were actually saying.</p>
+      <p>The obvious fix (capture every meeting centrally) runs straight into the reasons nobody had done it. An org-wide system touches every employee's calendar and the content of their conversations, so it has to answer hard questions about privacy, GDPR, client confidentiality and security before it can process a single meeting. A previous attempt in early 2026 stalled on exactly those issues, plus API readiness and routing complexity.</p>
+    </div>
+    <div class="brief reveal"><p><strong>The brief:</strong> capture client meeting notes automatically, keep anything sensitive out, file the rest against the right client, and add a signal layer (sentiment, risk, expansion, actions) that account teams can use. Do it in a way SecOps and the Data Protection Officer will sign off.</p></div>
+  </div>
+</section>
+
+<!-- ============ SOLUTION ============ -->
+<section id="solution">
+  <div class="wrap">
+    <div class="eyebrow reveal">The solution</div>
+    <h2 class="reveal">A pipeline that decides before it reads</h2>
+    <p class="section-lede reveal">A scheduled pipeline on Google Cloud that, every 30 minutes through the working day, looks at the meetings each consenting participant attended, decides from calendar metadata alone whether the meeting is in scope, and only then reads the AI-generated note. Claude checks the note for sensitive content and extracts a structured analysis. Cleared meetings are written to a regional Notion database as a record with a summary, action items with owners, and a set of client-health scores. The transcript itself is never stored.</p>
+    <div class="principles">
+      <div class="card principle reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
+        <h4>Consent, not delegation</h4>
+        <p>Each person grants read-only access to their own account through a branded self-service link. There is no service account and no domain-wide delegation, so the system can never see anyone who has not opted in.</p>
+      </div>
+      <div class="card principle reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div>
+        <h4>Decide on metadata first</h4>
+        <p>Five of the eight rules run before a single word of the meeting is read. Most out-of-scope meetings (wrong client, internal 1:1, HR, private events) are rejected without their content ever leaving Google.</p>
+      </div>
+      <div class="card principle reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+        <h4>Fail closed, and say why</h4>
+        <p>Every exclusion is logged with a machine-readable reason. When the system is unsure (no calendar event, unreadable note, unknown client) it leaves the meeting out rather than guessing, and the log becomes the tuning loop.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WORKFLOW ============ -->
+<section id="workflow" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">How it works</div>
+    <h2 class="reveal">Eight rules, every run</h2>
+    <p class="section-lede reveal">Every scheduled run applies the same eight rules, in order. Each exclusion is logged with a machine-readable reason.</p>
+
+    <div class="card flow reveal">
+      <div class="flow-head"><strong>The rules, in order</strong></div>
+
+      <div class="flow-row">
+        <div class="step meta-only"><span class="n">1</span><div><b>Calendar match</b><small>Meet code → Calendar event</small></div></div>
+        <p>The Meet conference record is joined to its Google Calendar event by meeting code. No event means no metadata to judge, so the meeting is excluded.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step meta-only"><span class="n">2</span><div><b>Gate 1, the pre-filter</b><small>Title block-list + visibility</small></div></div>
+        <p>The event title is checked against a block-list (1:1, PIP, HR, performance review, salary, legal, M&amp;A, board meeting, confidential), and events marked private or confidential are skipped. Matching is word-boundary based, so "HR" never matches "CHRIS".</p>
+      </div>
+      <div class="flow-row">
+        <div class="step meta-only"><span class="n">3</span><div><b>Client scope</b><small>Attendee email domains</small></div></div>
+        <p>For a meeting with external attendees, at least one must come from an approved client's confirmed invite domain. Domains are confirmed against real calendar invites, never taken from a website or a CRM field.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step meta-only"><span class="n">4</span><div><b>Title client check</b><small>Internal meetings only</small></div></div>
+        <p>An internal meeting has no client domain to check, so its title must name an approved client by name or the team's abbreviation. Before this rule existed, the pipeline had to read a note and pay for a model call just to learn the meeting was never eligible.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step meta-only"><span class="n">5</span><div><b>Settle delay</b><small>15 minutes</small></div></div>
+        <p>Gemini takes a few minutes to finish writing its note, so any meeting that ended less than 15 minutes ago waits for the next run.</p>
+      </div>
+
+      <div class="divider">Nothing above this line reads a word of the meeting</div>
+
+      <div class="flow-row">
+        <div class="step reads"><span class="n">6</span><div><b>Gate 2, sensitivity</b><small>Docs API read + Claude</small></div></div>
+        <p>The note is read through the Google Docs API and sent to Claude, which returns a structured result: whether the content is sensitive, plus summary points, action items, attendee sides and sentiment counts. Anything flagged is held for review and never written to Notion.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step reads"><span class="n">7</span><div><b>Dedupe and backstop</b><small>Gemini wins over Notion</small></div></div>
+        <p>The same meeting can arrive as a Gemini note and a Notion AI note. One page per meeting is kept (Gemini wins), and internal meetings with no client are caught again here in case rule 4 is switched off.</p>
+      </div>
+      <div class="flow-row final">
+        <div class="step out"><span class="n">8</span><div><b>Cleared</b><small>Written to Notion</small></div></div>
+        <p>A record is written to the client's regional Notion database with a link back to the original note. Derived fields only, never the transcript.</p>
+      </div>
+
+      <div class="legend">
+        <span><i style="background:var(--blue-100);border:1px solid var(--blue-200)"></i>Metadata only</span>
+        <span><i style="background:var(--blue-500)"></i>Reads content</span>
+        <span><i style="background:var(--navy-800)"></i>Output</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ARCHITECTURE ============ -->
+<section id="architecture">
+  <div class="wrap">
+    <div class="eyebrow reveal">Architecture</div>
+    <h2 class="reveal">Three paths, three trust boundaries</h2>
+    <p class="section-lede reveal">The system splits into three independent paths. Labels A, B and C are separate workflows, not one sequence.</p>
+
+    <div class="card diagram reveal">
+      <svg viewBox="0 0 1000 640" role="img" aria-label="Architecture diagram showing consent, capture and deploy paths across the outside world, the Google Cloud project, and third parties">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1A3F7A"/></marker>
+          <marker id="ahl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5B95F0"/></marker>
+          <linearGradient id="pipe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0F2C5C"/><stop offset="1" stop-color="#061430"/></linearGradient>
+          <filter id="sh" x="-10%" y="-10%" width="120%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0A1F44" flood-opacity=".12"/></filter>
+        </defs>
+
+        <!-- zones -->
+        <text x="20" y="22" font-size="11" font-weight="700" letter-spacing="1.5" fill="#6A7C98">OUTSIDE GCP</text>
+        <rect x="190" y="32" width="570" height="596" rx="14" fill="#F3F8FF" stroke="#93BDF7" stroke-dasharray="6 5"/>
+        <text x="206" y="22" font-size="11" font-weight="700" letter-spacing="1.5" fill="#2F6FD6">GCP PROJECT · DEFINED IN TERRAFORM, DEPLOYED BY GITHUB ACTIONS</text>
+        <rect x="780" y="32" width="205" height="410" rx="14" fill="#E3EEFD" stroke="#C7DDFB"/>
+        <text x="796" y="22" font-size="11" font-weight="700" letter-spacing="1.5" fill="#6A7C98">THIRD PARTIES</text>
+
+        <!-- lane labels -->
+        <g font-size="11" font-weight="700" letter-spacing="1.2" fill="#0F2C5C">
+          <text x="20" y="60">A · CONSENT</text>
+          <text x="20" y="232">B · CAPTURE</text>
+          <text x="20" y="548">C · DEPLOY</text>
+        </g>
+        <g font-size="10.5" fill="#6A7C98">
+          <text x="20" y="75">one time, per person</text>
+          <text x="20" y="247">every 30 minutes</text>
+          <text x="20" y="563">on merge to main</text>
+        </g>
+        <line x1="190" y1="200" x2="760" y2="200" stroke="#C7DDFB"/>
+        <line x1="190" y1="520" x2="760" y2="520" stroke="#C7DDFB"/>
+
+        <!-- A boxes -->
+        <g filter="url(#sh)">
+          <rect x="20" y="100" width="150" height="64" rx="10" fill="#fff" stroke="#C7DDFB"/>
+          <rect x="215" y="100" width="170" height="64" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="415" y="100" width="140" height="64" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="585" y="92" width="155" height="80" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="800" y="68" width="165" height="70" rx="10" fill="#fff" stroke="#93BDF7"/>
+        </g>
+        <g text-anchor="middle">
+          <text x="95" y="127" font-size="13" font-weight="700" fill="#0B1B36">Participant</text>
+          <text x="95" y="145" font-size="10.5" fill="#6A7C98">opens link, signs in</text>
+          <text x="300" y="127" font-size="13" font-weight="700" fill="#0B1B36">Cloud Run · Consent</text>
+          <text x="300" y="145" font-size="10.5" fill="#6A7C98">IAP-fronted, OAuth callback</text>
+          <text x="485" y="127" font-size="13" font-weight="700" fill="#0B1B36">Token encryption</text>
+          <text x="485" y="145" font-size="10.5" fill="#6A7C98">encrypt only</text>
+          <text x="662" y="122" font-size="13" font-weight="700" fill="#0B1B36">Firestore</text>
+          <text x="662" y="140" font-size="10.5" fill="#6A7C98">encrypted token</text>
+          <text x="662" y="154" font-size="10.5" fill="#6A7C98">+ consent record</text>
+          <text x="882" y="96" font-size="13" font-weight="700" fill="#0B1B36">Google OAuth</text>
+          <text x="882" y="114" font-size="10.5" fill="#6A7C98">consent screen</text>
+          <text x="882" y="128" font-size="10.5" fill="#6A7C98">read-only access</text>
+        </g>
+        <g stroke="#1A3F7A" stroke-width="1.6" fill="none" marker-end="url(#ah)">
+          <path d="M170 132 H211"/>
+          <path d="M385 132 H411"/>
+          <path d="M555 132 H581"/>
+          <path d="M300 100 C 300 50, 720 46, 796 92"/>
+        </g>
+
+        <!-- B boxes -->
+        <g filter="url(#sh)">
+          <rect x="215" y="222" width="190" height="48" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="215" y="300" width="230" height="150" rx="12" fill="url(#pipe)"/>
+          <rect x="215" y="470" width="170" height="36" rx="9" fill="#fff" stroke="#93BDF7"/>
+          <rect x="475" y="470" width="200" height="36" rx="9" fill="#fff" stroke="#93BDF7"/>
+          <rect x="800" y="232" width="165" height="56" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="800" y="306" width="165" height="56" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="800" y="380" width="165" height="56" rx="10" fill="#fff" stroke="#93BDF7"/>
+        </g>
+        <g text-anchor="middle">
+          <text x="310" y="243" font-size="13" font-weight="700" fill="#0B1B36">Cloud Scheduler</text>
+          <text x="310" y="260" font-size="10.5" fill="#6A7C98">OIDC identity token</text>
+          <text x="330" y="330" font-size="14" font-weight="700" fill="#FFFFFF">Cloud Run Job · Pipeline</text>
+          <text x="330" y="350" font-size="10.5" fill="#93BDF7">no HTTP surface</text>
+          <text x="330" y="378" font-size="11" fill="#E3EEFD">Gate 1 · metadata filter</text>
+          <text x="330" y="396" font-size="11" fill="#E3EEFD">Client scope check</text>
+          <text x="330" y="414" font-size="11" fill="#E3EEFD">Gate 2 · AI sensitivity</text>
+          <text x="330" y="436" font-size="10" fill="#93BDF7">note content held in memory, then discarded</text>
+          <text x="300" y="492" font-size="12" font-weight="600" fill="#0B1B36">Secret store</text>
+          <text x="575" y="492" font-size="12" font-weight="600" fill="#0B1B36">Firestore · audit + dedupe</text>
+          <text x="882" y="256" font-size="13" font-weight="700" fill="#0B1B36">Google Workspace</text>
+          <text x="882" y="273" font-size="10.5" fill="#6A7C98">Meet · Calendar · Docs</text>
+          <text x="882" y="330" font-size="13" font-weight="700" fill="#0B1B36">Claude</text>
+          <text x="882" y="347" font-size="10.5" fill="#6A7C98">Gate 2 analysis</text>
+          <text x="882" y="404" font-size="13" font-weight="700" fill="#0B1B36">Notion</text>
+          <text x="882" y="421" font-size="10.5" fill="#6A7C98">derived fields only</text>
+        </g>
+        <g stroke="#1A3F7A" stroke-width="1.6" fill="none" marker-end="url(#ah)">
+          <path d="M310 270 V296"/>
+          <path d="M445 320 C 600 320, 640 260, 796 260"/>
+          <path d="M445 345 C 620 345, 660 334, 796 334"/>
+          <path d="M445 400 C 620 400, 660 408, 796 408"/>
+          <path d="M300 450 V466"/>
+          <path d="M430 450 C 450 462, 500 462, 520 467"/>
+        </g>
+        <path d="M662 172 C 662 250, 520 280, 449 310" stroke="#5B95F0" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#ahl)"/>
+        <text x="672" y="212" font-size="10.5" fill="#2F6FD6">read token, decrypt only</text>
+
+        <!-- C boxes -->
+        <g filter="url(#sh)">
+          <rect x="20" y="578" width="150" height="44" rx="10" fill="#fff" stroke="#C7DDFB"/>
+          <rect x="215" y="578" width="200" height="44" rx="10" fill="#fff" stroke="#93BDF7"/>
+        </g>
+        <g text-anchor="middle">
+          <text x="95" y="597" font-size="12.5" font-weight="700" fill="#0B1B36">GitHub Actions</text>
+          <text x="95" y="612" font-size="10" fill="#6A7C98">no stored keys</text>
+          <text x="315" y="597" font-size="12.5" font-weight="700" fill="#0B1B36">Terraform</text>
+          <text x="315" y="612" font-size="10" fill="#6A7C98">locked, versioned state</text>
+        </g>
+        <path d="M170 600 H211" stroke="#1A3F7A" stroke-width="1.6" fill="none" marker-end="url(#ah)"/>
+        <path d="M415 600 H560" stroke="#5B95F0" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#ahl)"/>
+        <text x="570" y="604" font-size="11" fill="#2F6FD6">provisions every resource in the project</text>
+
+        <!-- step markers -->
+        <g font-size="10" font-weight="700" text-anchor="middle" fill="#fff">
+          <circle cx="190" cy="132" r="11" fill="#2F6FD6"/><text x="190" y="135.5">A1</text>
+          <circle cx="540" cy="52" r="11" fill="#2F6FD6"/><text x="540" y="55.5">A2</text>
+          <circle cx="398" cy="132" r="11" fill="#2F6FD6"/><text x="398" y="135.5">A3</text>
+          <circle cx="570" cy="132" r="11" fill="#2F6FD6"/><text x="570" y="135.5">A4</text>
+          <circle cx="345" cy="284" r="11" fill="#0F2C5C"/><text x="345" y="287.5">B1</text>
+          <circle cx="560" cy="264" r="11" fill="#0F2C5C"/><text x="560" y="267.5">B2</text>
+          <circle cx="270" cy="458" r="11" fill="#0F2C5C"/><text x="270" y="461.5">B3</text>
+          <circle cx="740" cy="270" r="11" fill="#0F2C5C"/><text x="740" y="273.5">B4</text>
+          <circle cx="740" cy="337" r="11" fill="#0F2C5C"/><text x="740" y="340.5">B5</text>
+          <circle cx="740" cy="406" r="11" fill="#0F2C5C"/><text x="740" y="409.5">B6</text>
+          <circle cx="470" cy="459" r="11" fill="#0F2C5C"/><text x="470" y="462.5">B7</text>
+          <circle cx="192" cy="600" r="11" fill="#5B95F0"/><text x="192" y="603.5">C1</text>
+          <circle cx="488" cy="600" r="11" fill="#5B95F0"/><text x="488" y="603.5">C2</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="paths">
+      <div class="card path reveal">
+        <span class="tag"><i>A</i>Consent</span>
+        <h4>One time, per person</h4>
+        <p>A public Cloud Run service, fronted by Identity-Aware Proxy, runs the Google OAuth flow (and optionally Notion's). The resulting token is encrypted and stored in Firestore alongside a consent record.</p>
+      </div>
+      <div class="card path reveal">
+        <span class="tag"><i>B</i>Capture</span>
+        <h4>Every 30 minutes</h4>
+        <p>Cloud Scheduler triggers a Cloud Run Job with an OIDC identity. The job has no HTTP surface at all. It calls Google Workspace as each consenting participant, sends note content to Claude, and writes derived fields to Notion. A Firestore collection holds the audit and dedupe trail, metadata only.</p>
+      </div>
+      <div class="card path reveal">
+        <span class="tag"><i>C</i>Deploy</span>
+        <h4>On merge to main</h4>
+        <p>GitHub Actions authenticates to Google Cloud through Workload Identity Federation, with no stored keys, and Terraform provisions every resource inside the project boundary from locked, versioned state.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TECHNICAL ============ -->
+<section id="technical" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">Technical detail</div>
+    <h2 class="reveal">Under the hood</h2>
+
+    <div class="tech-grid" style="margin-top:28px">
+      <div class="card reveal">
+        <h4>Capture: polling, by design</h4>
+        <p>Google offers a webhook through the Workspace Events API, but it needs a public endpoint and Pub/Sub. The pipeline polls recent conference records through the Meet API instead. Polling uses the same read-only access, has no inbound surface to attack, and stayed inside the original security approval. The poll and webhook adapters hand the pipeline the same event shape, so switching later is a drop-in.</p>
+      </div>
+      <div class="card reveal">
+        <h4>Gate 2: Claude with structured output</h4>
+        <p>A single Claude call (Claude Opus 5.5, with Sonnet 5.5 as fallback) returns a typed <code>MeetingAnalysis</code> object, validated by Pydantic. It carries the sensitivity decision (<code>sensitive_content_found</code>, <code>hold_for_review</code>, a reason), the meeting type, client name, summary points, action items with owners, attendee sides, and a set of counts: positive and negative indicators, courtesy signals, contribution points, risk signals and expansion signals.</p>
+      </div>
+      <div class="card reveal">
+        <h4>The model reports counts; code does the arithmetic</h4>
+        <p>Running the same note twice showed the raw counts drift by about 20% while the ratios held steady at 0.29. So the model is never asked for a score, only for the counts the score is computed from.</p>
+      </div>
+      <div class="card reveal">
+        <h4>The prompt is plain text in the repository</h4>
+        <p>Tuning what counts as sensitive is a one-line edit through GitHub's web editor, deployed in about five minutes.</p>
+      </div>
+    </div>
+
+    <h3 class="reveal">Scoring: a documented, deterministic formula</h3>
+    <div class="card formula reveal">
+      <div class="eq">
+        <span class="c"># scoring.py · Weighted Sentiment Score</span><br>
+        <span class="k">polarity</span>   = (pos − neg) ÷ (pos + neg + 2)<br>
+        <span class="k">sentiment</span>  = 5 + 5 × polarity<br>
+        <span class="k">engagement</span> = min(client_engagement ÷ 2, 1) × 10<br>
+        <span class="k">base</span>       = min(sentiment × 0.7 + engagement × 0.3, 9)<br>
+        <span class="k">score</span>      = base − min(2 × risk, 6) + (1 if expansion)<br>
+        <span class="c"># clamped to 1–10</span>
+      </div>
+      <div class="why">
+        <p><strong>Capped at 9 on purpose.</strong> A meeting can only reach 10 if it is healthy, engaged and carries a growth signal, which is what "ideal" means for an account.</p>
+        <p><strong>Binary expansion bonus.</strong> A chatty planning call cannot outrank a healthy relationship.</p>
+        <p><strong>Smoothed polarity.</strong> The +2 in the denominator stops the score depending on how long the meeting ran.</p>
+      </div>
+    </div>
+
+    <h3 class="reveal">Privacy and security controls</h3>
+    <ul class="checks">
+      <li class="card reveal"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span><div><strong>No transcript storage</strong>Note content is held in memory for the Gate 2 call and then discarded. It is never written to disk, logs, Firestore or Notion.</div></li>
+      <li class="card reveal"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span><div><strong>Separation of duties</strong>The service that stores tokens and the service that uses them hold separate permissions, so neither can do both.</div></li>
+      <li class="card reveal"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span><div><strong>Redacted logs that still diagnose</strong>Exception messages are stripped, but the HTTP status, the provider's reason code and the file and line in our code are kept. All three are fixed vocabulary, so they cannot carry meeting content.</div></li>
+      <li class="card reveal"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span><div><strong>Scope you can audit</strong>Every run logs a <code>scope_hash</code> of the participant and client boundary in force, so any historical run can be tied to the exact rules it ran under.</div></li>
+      <li class="card reveal"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span><div><strong>Approved clients cannot be admitted by accident</strong>Title matching only ever compares against the approved list, and a client's name is never used as a security input: only a confirmed domain is.</div></li>
+      <li class="card reveal"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span><div><strong>Formal sign-off</strong>Threat-modelled and approved with SecOps, with a major-change amendment for the client pilot, reviewed with the DPO, and provisioned with the Platform team.</div></li>
+    </ul>
+
+    <div class="tech-grid" style="margin-top:44px">
+      <div class="card reveal">
+        <h4>A second note source: Notion AI Meeting Notes</h4>
+        <p>Many people take notes in Notion rather than Gemini. Notion AI recordings happen across the agency every day, so the pipeline now reads them too, through a per-person Notion OAuth connection set up in the same consent flow. Both sources pass through the same gates. A cross-source dedupe key (a hash of the calendar event's iCalUID and start time) ensures one page per meeting, and when a team starts a note inside an existing Notion template row, the pipeline fills that row rather than creating a duplicate.</p>
+      </div>
+      <div class="card reveal">
+        <h4>Engineering practice</h4>
+        <p><strong>Pure logic separated from I/O.</strong> Every adapter (Meet, Calendar, Docs, Claude, Notion) has a fake mode backed by fixtures, so the whole pipeline ran end to end offline before a single live credential existed.</p>
+        <p><strong>Automated tests</strong> cover each gate, the scoring formula, consent decisions, token storage, dedupe and the retry rules.</p>
+        <p><strong>Infrastructure as code.</strong> Every resource is in Terraform and deployed through GitHub Actions, following the Platform team's house pattern.</p>
+        <p style="margin:0"><strong>Self-healing reads.</strong> A failed note read is deferred and retried (six attempts, or two for a permission error, which is permanent), and a replay tool reopens read failures without being able to reopen any other kind of exclusion.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ OUTPUT ============ -->
+<section id="output">
+  <div class="wrap">
+    <div class="eyebrow reveal">Output</div>
+    <h2 class="reveal">What people actually see</h2>
+
+    <div class="output-grid">
+      <div class="output-item reveal">
+        <h3><span class="n">1</span>Self-service consent</h3>
+        <p>A participant opens one link, approves Google (and optionally Notion), and lands on this page. Showing the authorized account is a deliberate security control: it lets the person confirm the right account was connected.</p>
+        <div class="window">
+          <div class="window-bar"><i></i><i></i><i></i><span>consent · connected</span></div>
+          <div class="consent">
+            <div class="consent-top"></div>
+            <div class="consent-body">
+              <div class="consent-check"><div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></div></div>
+              <h5>You're all set</h5>
+              <div class="as">Connected as <strong>participant@company.com</strong></div>
+              <div class="conn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>Google connected<span>read-only</span></div>
+              <div class="conn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>Notion connected<span>optional</span></div>
+            </div>
+            <div class="consent-foot">That's everything. You can close this tab. Your meeting notes will start coming through after your next client meeting. If you think meetings aren't being routed correctly, reach out to the project team on Slack.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="output-item reveal">
+        <h3><span class="n">2</span>The Notion record</h3>
+        <p>Each cleared meeting becomes a page in the regional client database, linked to the client's record. The layout and fields are exactly what the pipeline writes; the client, people and content are invented so no real client data appears here.</p>
+        <div class="window">
+          <div class="window-bar"><i></i><i></i><i></i><span>notion · client meeting notes</span></div>
+          <div class="notion">
+            <div class="crumb">Client Meeting Notes &amp; Sentiment / Northwind Outdoors</div>
+            <h5>NWO | Weekly Paid Search Status</h5>
+            <dl class="props">
+              <dt>Date</dt><dd>18 November 2026</dd>
+              <dt>Client database</dt><dd>Northwind Outdoors</dd>
+              <dt>Internal / External</dt><dd><span class="pill">External</span></dd>
+              <dt>Meeting type</dt><dd><span class="pill">Tactical / Weekly</span></dd>
+              <dt>Source</dt><dd><span class="pill">Gemini</span></dd>
+              <dt>Weighted Sentiment Score</dt><dd><span class="score">7.8</span><span class="meter"><i style="width:78%"></i></span></dd>
+              <dt>Client tone score</dt><dd>7.5</dd>
+              <dt>Client engagement</dt><dd>0.41 <small style="color:var(--ink-3)">(attributed)</small></dd>
+              <dt>Risk signals</dt><dd>0</dd>
+              <dt>Expansion signals</dt><dd>1 <span class="pill dark">new market test</span></dd>
+              <dt>Original notes</dt><dd><a href="#output" onclick="return false">Notes by Gemini</a></dd>
+            </dl>
+            <h6>Summary</h6>
+            <ul>
+              <li>Q4 brand campaign is pacing 4% under budget; client happy to hold bids through Black Friday.</li>
+              <li>Client asked for a scoped proposal to test Canada in Q1, with a budget range to be confirmed.</li>
+              <li>Feed errors on 120 products fixed last week; disapprovals are back under 1%.</li>
+            </ul>
+            <h6>Action items</h6>
+            <ul class="todo">
+              <li><span>Send Canada test proposal with two budget options <small>· Agency: Sam R. · Fri</small></span></li>
+              <li><span>Confirm Q1 promo calendar <small>· Client: Priya K.</small></span></li>
+              <li><span>Share Black Friday pacing check-in on Wednesday <small>· Agency: Alex T.</small></span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="output-item reveal" style="margin-top:48px">
+      <h3><span class="n">3</span>The run log</h3>
+      <p>Every run explains itself. Below is an excerpt from a real scheduled run, with identifiers truncated and names removed. Every exclusion and every clearance carries its reason.</p>
+      <div class="window terminal">
+        <div class="window-bar"><i></i><i></i><i></i><span>cloud run job · meeting-notes-pipeline</span></div>
+<pre><span class="t-c"># one scheduled run (ids truncated, names removed)</span>
+<span class="t-k">scope in force</span>       | scope_hash=10a6… stage=start
+<span class="t-k">client scope source</span>  | reason=notion stage=start
+<span class="t-x">excluded</span> | meeting_id=conferenceRecords/yPOW… reason=<span class="t-r">internal_no_client_in_title</span> status=excluded
+<span class="t-x">excluded</span> | meeting_id=notion-4220… reason=<span class="t-r">internal_1on1_no_client_in_title</span> status=excluded
+<span class="t-k">client confirmed by domain, not named in title</span> | meeting_id=conferenceRecords/8LB8… reason=<span class="t-r">title_alias_missing</span>
+<span class="t-k">Gate 2 answered</span> | duration_ms=27069 stage=claude-opus-5-5
+<span class="t-ok">cleared (→ Notion)</span> | meeting_id=conferenceRecords/Q1Zy… status=cleared
+<span class="t-ok">cleared (→ Notion)</span> | meeting_id=conferenceRecords/9D1z… status=cleared
+<span class="t-k">Gate 2 signals</span> <span class="t-c">(counts only, no content)</span>
+    conferenceRecords/Q1Zy…  asks=1 sensitive_aside=True
+    conferenceRecords/9D1z…  asks=4 sensitive_aside=True
+<span class="t-c">Container called exit(0).</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ IMPACT ============ -->
+<section id="impact" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">Key impact</div>
+    <h2 class="reveal">What changed</h2>
+    <div class="impact">
+      <div class="card lead wide reveal"><div class="big">Automatic</div><h4>From scattered notes to every in-scope client meeting filed, with no manual work</h4><p>Account teams get a summary, owned action items and a link to the full note in one place, organized by client and region.</p></div>
+      <div class="card wide reveal"><div class="big">Opt-in</div><h4>Adoption without a mandate</h4><p>People opted in through a two-click link, with no install, no training and no IT ticket.</p></div>
+      <div class="card reveal"><div class="big">Private</div><h4>Privacy that holds up to review</h4><p>Most meetings the system sees are excluded, almost all of them before their content is read, and nothing sensitive reaches Notion.</p></div>
+      <div class="card reveal"><div class="big">New</div><h4>A signal layer for account health</h4><p>Client meetings now carry comparable sentiment, engagement, risk and expansion scores, the foundation for spotting at-risk accounts before they show up in revenue.</p></div>
+      <div class="card reveal"><div class="big">Reusable</div><h4>A pattern for the next team</h4><p>The consent service, token handling, Terraform and CI setup, and the lessons on PKCE, IAM and Workload Identity limits are written up as a playbook for the next team building on Google Cloud.</p></div>
+    </div>
+  </div>
+</section>
+
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span><strong>Meeting Notes Infrastructure</strong> · 2026</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  root.classList.add('js');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Scroll progress
+  var bar = document.getElementById('progress');
+  function onScroll() {
+    var h = root.scrollHeight - root.clientHeight;
+    bar.style.width = (h > 0 ? (root.scrollTop / h) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // Count-up
+  function countUp(el) {
+    var target = parseInt(el.getAttribute('data-count'), 10);
+    if (reduce || isNaN(target) || target < 5) { el.textContent = target; return; }
+    var start = null, dur = 1100;
+    function step(t) {
+      if (!start) start = t;
+      var p = Math.min((t - start) / dur, 1);
+      el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  if (!('IntersectionObserver' in window)) {
+    document.querySelectorAll('.reveal').forEach(function (e) { e.classList.add('in'); });
+    document.querySelectorAll('#bar i').forEach(function (i) { i.style.width = i.dataset.w + '%'; });
+    return;
+  }
+
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      var el = en.target;
+      el.classList.add('in');
+      var n = el.querySelector('[data-count]');
+      if (n) countUp(n);
+      if (el.querySelector('#bar')) {
+        el.querySelectorAll('#bar i').forEach(function (i) { i.style.width = i.dataset.w + '%'; });
+      }
+      io.unobserve(el);
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(function (e) { io.observe(e); });
+
+  // Active nav link
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav a.link'));
+  var map = {};
+  links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+  var so = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (en.isIntersecting && map[en.target.id]) {
+        links.forEach(function (a) { a.classList.remove('active'); });
+        map[en.target.id].classList.add('active');
+      }
+    });
+  }, { rootMargin: '-45% 0px -50% 0px' });
+  document.querySelectorAll('main section[id]').forEach(function (s) { so.observe(s); });
+})();
+</script>
+</body>
+</html>
