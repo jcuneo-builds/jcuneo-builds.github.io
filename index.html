@@ -79,7 +79,7 @@
   @keyframes ping { 0% { transform: scale(.6); opacity: .7; } 100% { transform: scale(1.8); opacity: 0; } }
   .hero h1 { color: var(--white); font-size: clamp(40px, 5.2vw, 66px); line-height: 1.02; font-weight: 800; letter-spacing: -0.035em; margin: 22px 0 22px; }
   .hero h1 .grad { background: linear-gradient(90deg, var(--blue-200), var(--blue-400)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .rotator { display: none; min-height: 1.15em; font-size: clamp(22px, 2.6vw, 30px); font-weight: 600; color: var(--blue-100); letter-spacing: -0.02em; line-height: 1.3; margin-bottom: 20px; }
+  .rotator { display: block; min-height: 1.3em; font-size: clamp(22px, 2.6vw, 30px); font-weight: 600; color: var(--blue-100); letter-spacing: -0.02em; line-height: 1.3; margin-bottom: 20px; }
   .rotator .word { color: var(--blue-300); border-right: 3px solid var(--blue-300); padding-right: 4px; animation: caret 1s steps(1) infinite; }
   @keyframes caret { 50% { border-color: transparent; } }
   .hero .intro { font-size: 18.5px; color: rgba(227,238,253,.82); max-width: 560px; margin-bottom: 32px; }
@@ -212,7 +212,7 @@
   .js .reveal.in { opacity: 1; transform: none; }
   @media (prefers-reduced-motion: reduce) {
     .js .reveal { opacity: 1; transform: none; transition: none; }
-    .pulse::after, .scroll-cue::after, .float { animation: none; }
+    .pulse::after, .scroll-cue::after, .float, .rotator .word { animation: none; }
     html { scroll-behavior: auto; }
   }
 
@@ -245,6 +245,7 @@
     .float.s1 { left: -4%; bottom: 34%; }
     .float.s2 { right: -4%; bottom: 4%; }
     .float.s3 { display: none; }
+    .rotator { font-size: 19px; white-space: nowrap; }
     .contact .card { padding: 40px 20px; }
   }
 </style>
@@ -269,11 +270,12 @@
   <div class="wrap">
     <div>
       <span class="badge"><span class="pulse"></span>AI Automation &amp; Operations Manager</span>
-      <h1>Hi, I'm Jen.<br>I automate the <span class="grad">busywork in operations.</span></h1>
-      <p class="intro">I look for the repetitive work slowing teams down, then replace it with automations and AI workflows people actually use. Pricing, resourcing, onboarding, reporting: if it runs on copy-paste, I can probably fix it.</p>
+      <h1>I build operations that <span class="grad">run themselves.</span></h1>
+      <span class="rotator" aria-live="polite">Systems that <span class="word" id="word">remove the blockers</span></span>
+      <p class="intro">I'm Jen. I find where work gets stuck, then connect the tools and automate the steps so teams spend less time on admin and more on the work that matters.</p>
       <div class="actions">
         <a class="btn primary" href="#work">See my work <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-        <a class="btn ghost" href="projects/meeting-notes.html">Featured case study</a>
+        <a class="btn ghost" href="https://jcuneo-builds.github.io/meeting-notes-infrastructure/">Featured case study</a>
       </div>
     </div>
 
@@ -334,7 +336,7 @@
       </div>
     </div>
 
-    <a class="card featured reveal" href="projects/meeting-notes.html" data-tags="ai automation apps ops">
+    <a class="card featured reveal" href="https://jcuneo-builds.github.io/meeting-notes-infrastructure/" data-tags="ai automation apps ops">
       <div class="copy">
         <span class="kicker">Featured case study</span>
         <h3>Meeting Notes Infrastructure</h3>
@@ -355,23 +357,23 @@
     </a>
 
     <div class="grid" id="grid">
-      <a class="card proj reveal" href="projects/argus.html" data-tags="automation apps">
+      <a class="card proj reveal" href="https://jcuneo-builds.github.io/argus/" data-tags="automation apps">
         <div class="top"><span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="go">read case study →</span></div>
         <h4>Argus</h4>
         <p>Tracks every DV360 change across 300+ line items and writes monthly insights for 100+ campaigns. Saves 10+ hours a week.</p>
         <div class="tags"><span class="tag">Python</span><span class="tag">DV360</span><span class="tag">Apps Script</span></div>
+      </a>
+      <a class="card proj reveal" href="https://jcuneo-builds.github.io/fee-sheet/" data-tags="ai apps ops">
+        <div class="top"><span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8M12 8v8"/></svg></span><span class="go">read case study →</span></div>
+        <h4>Fee Sheet Builder</h4>
+        <p>A web app that replaces a formula-heavy pricing spreadsheet. It prices, checks, approves and files every fee sheet, and Claude suggests team changes based on past deals.</p>
+        <div class="tags"><span class="tag">Claude</span><span class="tag">Cloud Run</span><span class="tag">Pricing</span></div>
       </a>
       <div class="card proj reveal" data-tags="ai automation ops">
         <div class="top"><span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg></span><span class="soon">case study soon</span></div>
         <h4>Fee sheet auto-drafter</h4>
         <p>Reads pricing requests from email and drafts a first-pass fee sheet automatically.</p>
         <div class="tags"><span class="tag">AI</span><span class="tag">Automation</span></div>
-      </div>
-      <div class="card proj reveal" data-tags="apps ops">
-        <div class="top"><span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8M12 8v8"/></svg></span><span class="soon">case study soon</span></div>
-        <h4>Fee sheet web app</h4>
-        <p>A web app for building and versioning pricing models, instead of passing spreadsheet copies around.</p>
-        <div class="tags"><span class="tag">Cloud Run</span><span class="tag">Apps</span></div>
       </div>
       <div class="card proj reveal" data-tags="automation ops">
         <div class="top"><span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="soon">case study soon</span></div>
@@ -490,6 +492,19 @@
       glow.style.left = (e.clientX - r.left) + 'px';
       glow.style.top = (e.clientY - r.top) + 'px';
     });
+  }
+
+  // Typing rotator
+  var words = ['remove the blockers', 'connect every platform', 'cut hours of manual work', 'fix recurring pain points', 'keep data in sync', 'free teams for real work'];
+  var wEl = document.getElementById('word');
+  if (wEl && !reduce) {
+    var wi = 0, ci = words[0].length, del = true;
+    setTimeout(function tick() {
+      if (del) { ci--; if (ci <= 0) { del = false; wi = (wi + 1) % words.length; ci = 0; } }
+      else { ci++; if (ci >= words[wi].length) { del = true; wEl.textContent = words[wi]; return setTimeout(tick, 1900); } }
+      wEl.textContent = words[wi].slice(0, ci) || ' ';
+      setTimeout(tick, del ? 32 : 58);
+    }, 2200);
   }
 
   // Project filters
