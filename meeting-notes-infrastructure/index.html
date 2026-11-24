@@ -348,7 +348,8 @@
     .wrap { padding: 0 16px; }
     section { padding: 64px 0; }
     .hero { padding: 64px 0 48px; }
-    .nav .brand span.full { display: none; }
+    .nav .brand span.full { font-size: 0; }
+    .nav .brand span.full::after { content: "← Home"; font-size: 14px; }
     .meta { grid-template-columns: 1fr; }
     .meta div { border-right: 0 !important; border-bottom: 1px solid rgba(147,189,247,.14) !important; }
     .meta div:last-child { border-bottom: 0 !important; }
@@ -373,7 +374,7 @@
 
 <nav class="nav" aria-label="Sections">
   <div class="wrap">
-    <a class="brand" href="#top"><span class="dot"></span><span class="full">Meeting Notes Infrastructure</span></a>
+    <a class="brand" href="https://jcuneo-builds.github.io/" aria-label="Back to Jen Cuneo homepage"><span class="dot"></span><span class="full">← Jen Cuneo</span></a>
     <ul>
       <li><a class="link" href="#problem">Problem</a></li>
       <li><a class="link" href="#solution">Solution</a></li>
@@ -863,6 +864,7 @@
 <footer>
   <div class="wrap">
     <span><strong>Meeting Notes Infrastructure</strong> · 2026</span>
+    <a href="https://jcuneo-builds.github.io/#work" style="color:var(--blue-300)">← More projects</a>
   </div>
 </footer>
 
