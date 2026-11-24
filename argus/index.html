@@ -1,0 +1,831 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Argus · Change Log &amp; Insights</title>
+<meta name="description" content="Argus: an automated DV360 change log and performance insight engine built in Python.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #061430;
+    --navy-800: #0A1F44;
+    --navy-700: #0F2C5C;
+    --navy-600: #1A3F7A;
+    --blue-500: #2F6FD6;
+    --blue-400: #5B95F0;
+    --blue-300: #93BDF7;
+    --blue-200: #C7DDFB;
+    --blue-100: #E3EEFD;
+    --blue-50:  #F3F8FF;
+    --ink: #0B1B36;
+    --ink-2: #3A4D6B;
+    --ink-3: #6A7C98;
+    --line: #D6E3F5;
+    --white: #FFFFFF;
+    --radius: 14px;
+    --radius-sm: 10px;
+    --shadow-sm: 0 1px 2px rgba(10,31,68,.06), 0 2px 8px rgba(10,31,68,.05);
+    --shadow: 0 1px 2px rgba(10,31,68,.06), 0 12px 32px -8px rgba(10,31,68,.18);
+    --page: 1120px;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+  body {
+    margin: 0;
+    background: var(--blue-50);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .wrap { max-width: var(--page); margin: 0 auto; padding: 0 28px; }
+  a { color: var(--blue-500); }
+  strong { font-weight: 600; color: var(--ink); }
+  p { margin: 0 0 16px; color: var(--ink-2); }
+  h1, h2, h3, h4 { margin: 0; color: var(--ink); letter-spacing: -0.02em; }
+  h2 { font-size: clamp(30px, 4vw, 42px); line-height: 1.1; font-weight: 700; margin-bottom: 18px; }
+  h3 { font-size: 22px; line-height: 1.3; font-weight: 600; margin: 44px 0 12px; }
+  code {
+    font-family: var(--mono); font-size: 0.82em;
+    background: var(--blue-100); color: var(--navy-700);
+    border: 1px solid var(--blue-200); border-radius: 6px; padding: 1px 6px;
+    word-break: break-word;
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 12.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--blue-500); margin-bottom: 14px;
+  }
+  .eyebrow::before { content: ""; width: 22px; height: 2px; background: currentColor; border-radius: 2px; }
+  .section-lede { font-size: 19px; max-width: 760px; }
+
+  /* ---------- Progress + nav ---------- */
+  .progress { position: fixed; top: 0; left: 0; height: 3px; width: 0; z-index: 60;
+    background: linear-gradient(90deg, var(--blue-400), var(--blue-200)); }
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(6,20,48,.82); backdrop-filter: saturate(160%) blur(14px); -webkit-backdrop-filter: saturate(160%) blur(14px);
+    border-bottom: 1px solid rgba(147,189,247,.14);
+  }
+  .nav .wrap { display: flex; align-items: center; gap: 24px; height: 60px; }
+  .nav .brand { color: var(--white); font-weight: 600; font-size: 15px; white-space: nowrap; display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .nav .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--blue-300); box-shadow: 0 0 0 4px rgba(147,189,247,.18); }
+  .nav ul { list-style: none; display: flex; gap: 4px; margin: 0 0 0 auto; padding: 0; overflow-x: auto; scrollbar-width: none; }
+  .nav ul::-webkit-scrollbar { display: none; }
+  .nav a.link { display: block; padding: 6px 11px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: rgba(227,238,253,.72); text-decoration: none; white-space: nowrap; transition: background .2s, color .2s; }
+  .nav a.link:hover { color: var(--white); background: rgba(147,189,247,.12); }
+  .nav a.link.active { color: var(--white); background: rgba(147,189,247,.2); }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    position: relative; overflow: hidden; color: var(--white);
+    background:
+      radial-gradient(900px 480px at 85% -10%, rgba(91,149,240,.42), transparent 60%),
+      radial-gradient(700px 420px at -10% 110%, rgba(47,111,214,.35), transparent 60%),
+      linear-gradient(180deg, var(--navy-900), var(--navy-800));
+    padding: 96px 0 72px;
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(147,189,247,.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(147,189,247,.08) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at 60% 30%, #000 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at 60% 30%, #000 30%, transparent 75%);
+  }
+  .hero .wrap { position: relative; }
+  .status {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 13px; font-weight: 500; color: var(--blue-100);
+    padding: 6px 14px 6px 10px; border-radius: 999px;
+    background: rgba(147,189,247,.12); border: 1px solid rgba(147,189,247,.28);
+  }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: #7FD3FF; position: relative; }
+  .pulse::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid #7FD3FF; opacity: .6; animation: ping 2s infinite; }
+  @keyframes ping { 0% { transform: scale(.6); opacity: .7; } 100% { transform: scale(1.8); opacity: 0; } }
+  .hero h1 { color: var(--white); font-size: clamp(42px, 7vw, 84px); line-height: 1.02; font-weight: 800; letter-spacing: -0.035em; margin: 24px 0 22px; max-width: 900px; }
+  .hero h1 span { background: linear-gradient(90deg, var(--blue-200), var(--blue-400)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero .lede { font-size: clamp(18px, 2vw, 22px); line-height: 1.5; color: rgba(227,238,253,.85); max-width: 720px; margin: 0; }
+  .meta {
+    margin-top: 48px; display: grid; grid-template-columns: repeat(3, 1fr);
+    border: 1px solid rgba(147,189,247,.2); border-radius: var(--radius);
+    background: rgba(10,31,68,.55); backdrop-filter: blur(8px); overflow: hidden;
+  }
+  .meta div { padding: 18px 22px; border-right: 1px solid rgba(147,189,247,.14); border-bottom: 1px solid rgba(147,189,247,.14); }
+  .meta div:nth-child(3n) { border-right: 0; }
+  .meta div:nth-last-child(-n+3) { border-bottom: 0; }
+  .meta dt { font-size: 11.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--blue-300); margin-bottom: 6px; }
+  .meta dd { margin: 0; font-size: 15px; line-height: 1.5; color: var(--blue-50); }
+
+  /* ---------- Sections ---------- */
+  section { padding: 96px 0; }
+  section.alt { background: var(--white); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .card { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+
+  /* ---------- Stats ---------- */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 36px; }
+  .stat { padding: 22px 22px 20px; position: relative; overflow: hidden; transition: transform .25s, box-shadow .25s; }
+  .stat:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .stat .num { font-size: 42px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; color: var(--navy-800); font-variant-numeric: tabular-nums; }
+  .stat .label { font-size: 14.5px; line-height: 1.45; color: var(--ink-2); margin-top: 8px; }
+  .stat .src { font-size: 12px; color: var(--ink-3); margin-top: 12px; font-family: var(--mono); }
+  .stat.feature { background: linear-gradient(150deg, var(--navy-700), var(--navy-900)); border-color: var(--navy-700); }
+  .stat.feature .num, .stat.feature .label { color: var(--white); }
+  .stat.feature .src { color: var(--blue-300); }
+  .stat.feature::after { content: ""; position: absolute; right: -40px; top: -40px; width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle, rgba(91,149,240,.45), transparent 70%); }
+
+  .split { margin-top: 20px; padding: 24px; }
+  .split-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .split-head strong { font-size: 15px; }
+  .split-head span { font-size: 13px; color: var(--ink-3); }
+  .bar { display: flex; height: 14px; border-radius: 999px; overflow: hidden; background: var(--blue-100); }
+  .bar i { display: block; height: 100%; width: 0; transition: width 1.2s cubic-bezier(.2,.7,.2,1); }
+  .bar .b1 { background: var(--navy-700); }
+  .bar .b2 { background: var(--blue-300); }
+  .bar .b3 { background: var(--blue-500); }
+  .legend { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 14px; font-size: 13.5px; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  /* ---------- Before / after ---------- */
+  .ba { display: grid; grid-template-columns: 1fr 56px 1fr; align-items: stretch; margin-top: 36px; }
+  .ba .card { padding: 28px; }
+  .ba h4 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; margin-bottom: 16px; color: var(--ink-3); }
+  .ba .after { background: linear-gradient(160deg, var(--navy-800), var(--navy-900)); border-color: var(--navy-700); box-shadow: var(--shadow); }
+  .ba .after h4 { color: var(--blue-300); }
+  .ba .after p { color: rgba(227,238,253,.82); }
+  .ba p { font-size: 15px; margin: 18px 0 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { font-size: 13.5px; font-weight: 500; padding: 6px 12px; border-radius: 999px; }
+  .chip.old { background: var(--blue-50); color: var(--ink-3); border: 1px dashed #B8C8E0; text-decoration: line-through; text-decoration-color: rgba(106,124,152,.5); }
+  .chip.new { background: rgba(147,189,247,.14); color: var(--blue-100); border: 1px solid rgba(147,189,247,.35); }
+  .chip.new.hi { background: var(--blue-300); color: var(--navy-900); border-color: var(--blue-300); }
+  .arrow { display: flex; align-items: center; justify-content: center; color: var(--blue-500); }
+  .arrow svg { width: 28px; height: 28px; }
+
+  .brief { margin-top: 28px; padding: 24px 28px; border-left: 4px solid var(--blue-500); border-radius: var(--radius-sm); background: var(--blue-100); }
+  .brief p { margin: 0; color: var(--ink); font-size: 17px; }
+
+  /* ---------- Principles ---------- */
+  .principles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 32px; }
+  .principle { padding: 28px; transition: transform .25s, box-shadow .25s; }
+  .principle:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--blue-100); color: var(--blue-500); margin-bottom: 18px; }
+  .icon svg { width: 22px; height: 22px; }
+  .principle h4 { font-size: 19px; font-weight: 600; margin-bottom: 8px; }
+  .principle p { font-size: 15.5px; margin: 0; }
+
+  /* ---------- Workflow ---------- */
+  .flow { margin-top: 32px; padding: 10px; }
+  .flow-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 14px 16px 10px; }
+  .flow-head small { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+  .flow-row { display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: center; padding: 14px 16px; border-radius: 12px; transition: background .2s; }
+  .flow-row:hover { background: var(--blue-50); }
+  .flow-row + .flow-row { border-top: 1px solid var(--line); }
+  .step { display: flex; align-items: center; gap: 14px; }
+  .step .n { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 10px; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+  .step.meta-only .n { background: var(--blue-100); color: var(--navy-700); border: 1px solid var(--blue-200); }
+  .step.reads .n { background: var(--blue-500); color: var(--white); }
+  .step.out .n { background: var(--navy-800); color: var(--white); }
+  .step b { display: block; font-size: 15.5px; font-weight: 600; line-height: 1.3; }
+  .step small { display: block; font-size: 12.5px; color: var(--ink-3); line-height: 1.35; }
+  .flow-row p { margin: 0; font-size: 15px; line-height: 1.55; }
+  .count { display: flex; align-items: baseline; gap: 8px; padding-left: 16px; border-left: 2px solid var(--blue-200); }
+  .count strong { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--navy-800); }
+  .count span { font-size: 13px; color: var(--ink-2); line-height: 1.3; }
+  .count code { font-size: 11px; display: block; margin-top: 2px; width: fit-content; }
+  .flow-row.final { background: linear-gradient(90deg, var(--blue-100), transparent); }
+  .flow-row.final .count strong { color: var(--blue-500); }
+  .divider { display: flex; align-items: center; gap: 14px; padding: 10px 16px; font-size: 12.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--blue-500); }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 0; border-top: 1.5px dashed var(--blue-300); }
+  .flow .legend { padding: 10px 16px 8px; }
+
+  /* ---------- Architecture ---------- */
+  .diagram { margin-top: 32px; padding: 18px; overflow-x: auto; }
+  .diagram svg { display: block; width: 100%; min-width: 820px; height: auto; font-family: 'Inter', system-ui, sans-serif; }
+  .paths { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 18px; }
+  .path { padding: 26px; }
+  .tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; letter-spacing: .04em; padding: 4px 12px; border-radius: 999px; background: var(--blue-100); color: var(--navy-700); margin-bottom: 14px; }
+  .tag i { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--navy-700); color: var(--white); font-style: normal; font-size: 11px; }
+  .path h4 { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .path p { font-size: 15px; margin: 0; }
+
+  /* ---------- Technical ---------- */
+  .tech-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .tech-grid .card { padding: 26px; }
+  .tech-grid h4 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+  .tech-grid p { font-size: 15.5px; margin: 0; }
+  .formula { display: grid; grid-template-columns: 1.1fr 1fr; gap: 0; overflow: hidden; margin-top: 18px; }
+  .formula .eq { white-space: nowrap; overflow-x: auto; background: var(--navy-900); color: var(--blue-100); padding: 26px 28px; font-family: var(--mono); font-size: 14px; line-height: 2; }
+  .formula .eq .k { color: var(--blue-300); }
+  .formula .eq .c { color: #7E93B5; }
+  .formula .why { padding: 26px 28px; }
+  .formula .why p { font-size: 15.5px; }
+  .formula .why p:last-child { margin: 0; }
+
+  .checks { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .checks li { display: flex; gap: 14px; padding: 20px; }
+  .checks li .tick { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 8px; background: var(--blue-100); color: var(--blue-500); display: grid; place-items: center; }
+  .checks li .tick svg { width: 14px; height: 14px; }
+  .checks li div { font-size: 15px; line-height: 1.55; color: var(--ink-2); }
+  .checks li strong { display: block; color: var(--ink); margin-bottom: 2px; }
+
+  /* ---------- Mock frames ---------- */
+  .output-grid { display: grid; grid-template-columns: 1fr 1.25fr; gap: 28px; align-items: start; margin-top: 28px; }
+  .output-item h3 { margin-top: 0; display: flex; align-items: center; gap: 12px; }
+  .output-item h3 .n { width: 30px; height: 30px; border-radius: 9px; background: var(--navy-800); color: var(--white); display: grid; place-items: center; font-size: 14px; font-weight: 700; }
+  .output-item > p { font-size: 15.5px; }
+  .window { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); background: var(--white); box-shadow: var(--shadow); }
+  .window-bar { display: flex; align-items: center; gap: 7px; padding: 11px 14px; background: var(--blue-50); border-bottom: 1px solid var(--line); }
+  .window-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--blue-200); }
+  .window-bar span { margin-left: 10px; font-size: 12px; color: var(--ink-3); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .consent { padding: 0; }
+  .consent-top { height: 72px; background: linear-gradient(120deg, var(--navy-800), var(--blue-500)); position: relative; }
+  .consent-top::after { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,.18) 1px, transparent 1px); background-size: 14px 14px; }
+  .consent-body { padding: 0 28px 26px; }
+  .consent-check { width: 56px; height: 56px; border-radius: 50%; background: var(--white); border: 4px solid var(--white); box-shadow: var(--shadow); display: grid; place-items: center; margin-top: -28px; position: relative; }
+  .consent-check div { width: 100%; height: 100%; border-radius: 50%; background: var(--blue-500); color: var(--white); display: grid; place-items: center; }
+  .consent-check svg { width: 22px; height: 22px; }
+  .consent h5 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 16px 0 4px; }
+  .consent .as { font-size: 14.5px; color: var(--ink-2); margin-bottom: 18px; }
+  .conn { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; background: var(--blue-50); border: 1px solid var(--blue-200); font-size: 14.5px; font-weight: 600; margin-bottom: 8px; }
+  .conn svg { width: 16px; height: 16px; color: var(--blue-500); }
+  .conn span { margin-left: auto; font-size: 12px; font-weight: 500; color: var(--blue-500); }
+  .consent-foot { border-top: 1px solid var(--line); padding: 16px 28px 20px; font-size: 13.5px; color: var(--ink-2); line-height: 1.55; }
+
+  .notion { padding: 26px 30px 28px; }
+  .crumb { font-size: 12.5px; color: var(--ink-3); margin-bottom: 8px; }
+  .notion h5 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 18px; }
+  .props { display: grid; grid-template-columns: 190px 1fr; row-gap: 7px; font-size: 14px; margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+  .props dt { color: var(--ink-3); }
+  .props dd { margin: 0; color: var(--ink); }
+  .pill { display: inline-block; font-size: 12px; font-weight: 500; padding: 1px 9px; border-radius: 6px; background: var(--blue-100); color: var(--navy-700); }
+  .pill.dark { background: var(--navy-700); color: var(--white); }
+  .score { font-weight: 700; }
+  .meter { display: inline-block; vertical-align: middle; width: 90px; height: 6px; border-radius: 9px; background: var(--blue-100); margin-left: 10px; overflow: hidden; }
+  .meter i { display: block; height: 100%; background: linear-gradient(90deg, var(--blue-400), var(--navy-700)); }
+  .notion h6 { font-size: 15px; font-weight: 700; margin: 0 0 8px; }
+  .notion ul { margin: 0 0 18px; padding-left: 20px; font-size: 14px; color: var(--ink-2); }
+  .notion ul li { margin-bottom: 4px; }
+  .todo { list-style: none; padding: 0 !important; }
+  .todo li { display: flex; gap: 10px; align-items: baseline; }
+  .todo li::before { content: ""; width: 13px; height: 13px; flex: 0 0 13px; border: 1.5px solid var(--blue-300); border-radius: 4px; transform: translateY(2px); }
+  .todo small { color: var(--ink-3); }
+
+  .terminal { background: var(--navy-900); border-color: #12284F; }
+  .terminal .window-bar { background: #0B1D3D; border-color: #12284F; }
+  .terminal .window-bar i { background: #22406F; }
+  .terminal .window-bar span { color: #7E93B5; }
+  .terminal pre { margin: 0; padding: 20px 22px 22px; font-family: var(--mono); font-size: 12.5px; line-height: 1.85; color: #C9D8F2; overflow-x: auto; }
+  .t-c { color: #6F86AD; }
+  .t-k { color: var(--blue-300); }
+  .t-x { color: #9FC3FF; }
+  .t-r { color: #E3EEFD; text-decoration: underline; text-decoration-color: rgba(147,189,247,.4); text-underline-offset: 3px; }
+  .t-ok { color: #7FD3FF; }
+  .t-tot { color: var(--white); font-weight: 500; }
+
+  /* ---------- Impact ---------- */
+  .impact { display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; margin-top: 32px; }
+  .impact .card { padding: 26px; grid-column: span 2; transition: transform .25s, box-shadow .25s; }
+  .impact .card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .impact .card.wide { grid-column: span 3; }
+  .impact .card.lead { background: linear-gradient(150deg, var(--navy-700), var(--navy-900)); border-color: var(--navy-700); }
+  .impact .card.lead h4, .impact .card.lead .big { color: var(--white); }
+  .impact .card.lead p { color: rgba(227,238,253,.82); }
+  .impact .big { font-size: 38px; font-weight: 700; letter-spacing: -0.03em; color: var(--navy-800); line-height: 1; margin-bottom: 14px; }
+  .impact h4 { font-size: 17px; font-weight: 600; margin-bottom: 6px; line-height: 1.35; }
+  .impact p { font-size: 15px; margin: 0; }
+
+  /* ---------- Next / lessons ---------- */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; }
+  .timeline { list-style: none; padding: 0; margin: 24px 0 0; position: relative; }
+  .timeline::before { content: ""; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: linear-gradient(var(--blue-400), var(--blue-100)); }
+  .timeline li { position: relative; padding: 0 0 24px 34px; font-size: 15.5px; color: var(--ink-2); }
+  .timeline li::before { content: ""; position: absolute; left: 0; top: 6px; width: 16px; height: 16px; border-radius: 50%; background: var(--white); border: 3px solid var(--blue-500); }
+  .timeline li strong { display: block; margin-bottom: 2px; }
+  .lessons { display: grid; gap: 14px; margin-top: 24px; }
+  .lesson { padding: 20px 22px; display: flex; gap: 16px; }
+  .lesson .q { font-size: 30px; line-height: .9; font-weight: 800; color: var(--blue-300); font-family: Georgia, serif; }
+  .lesson div { font-size: 15px; color: var(--ink-2); }
+  .lesson strong { display: block; margin-bottom: 2px; }
+
+  /* ---------- Footer ---------- */
+  footer { background: var(--navy-900); color: rgba(227,238,253,.7); padding: 40px 0; font-size: 14px; }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  footer strong { color: var(--white); }
+
+  /* ---------- Reveal ---------- */
+  .js .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
+  .js .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .js .reveal { opacity: 1; transform: none; transition: none; }
+    .pulse::after { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 980px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .principles, .paths { grid-template-columns: 1fr; }
+    .output-grid { grid-template-columns: 1fr; }
+    .impact { grid-template-columns: 1fr 1fr; }
+    .impact .card, .impact .card.wide { grid-column: span 1; }
+    .impact .card.lead { grid-column: span 2; }
+    .formula { grid-template-columns: 1fr; }
+    .flow-row { grid-template-columns: 200px 1fr; }
+    .flow-row .count { grid-column: 2; }
+  }
+  @media (max-width: 720px) {
+    body { font-size: 16px; }
+    .wrap { padding: 0 16px; }
+    section { padding: 64px 0; }
+    .hero { padding: 64px 0 48px; }
+    .nav .brand span.full { display: none; }
+    .meta { grid-template-columns: 1fr; }
+    .meta div { border-right: 0 !important; border-bottom: 1px solid rgba(147,189,247,.14) !important; }
+    .meta div:last-child { border-bottom: 0 !important; }
+    .stat .num { font-size: 34px; }
+    .ba { grid-template-columns: 1fr; gap: 0; }
+    .arrow { height: 44px; transform: rotate(90deg); }
+    .tech-grid, .checks, .cols { grid-template-columns: 1fr; }
+    .cols { gap: 24px; }
+    .impact { grid-template-columns: 1fr; }
+    .impact .card, .impact .card.wide, .impact .card.lead { grid-column: span 1; }
+    .flow-row { grid-template-columns: 1fr; gap: 10px; }
+    .flow-row .count { grid-column: 1; }
+    .props { grid-template-columns: 1fr; row-gap: 2px; }
+    .props dd { margin-bottom: 8px; }
+    .notion { padding: 22px; }
+    .consent-body, .consent-foot { padding-left: 20px; padding-right: 20px; }
+  }
+
+  /* ---------- Argus extras ---------- */
+  .chart-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 18px; margin-top: 32px; }
+  .chart { padding: 24px 26px; }
+  .chart-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  .chart-head strong { font-size: 15.5px; }
+  .chart-head span { font-size: 12.5px; color: var(--ink-3); font-family: var(--mono); }
+  .hbars { display: grid; gap: 12px; }
+  .hbar { display: grid; grid-template-columns: 170px 1fr 40px; align-items: center; gap: 12px; font-size: 14px; }
+  .hbar .lbl { color: var(--ink-2); }
+  .hbar .track { height: 12px; border-radius: 999px; background: var(--blue-100); overflow: hidden; }
+  .hbar .track i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--blue-400), var(--navy-700)); transition: width 1.1s cubic-bezier(.2,.7,.2,1); }
+  .hbar b { text-align: right; font-variant-numeric: tabular-nums; color: var(--navy-800); }
+  .donut-wrap { display: grid; grid-template-columns: 150px 1fr; gap: 22px; align-items: center; }
+  .donut { width: 150px; height: 150px; }
+  .sev { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .sev li { display: flex; gap: 12px; align-items: flex-start; }
+  .sev i { width: 12px; height: 12px; border-radius: 4px; flex: 0 0 12px; margin-top: 5px; }
+  .sev b { display: block; font-size: 14.5px; color: var(--ink); }
+  .sev span { font-size: 13.5px; color: var(--ink-2); line-height: 1.45; }
+
+  .explorer { padding: 20px 22px 18px; }
+  .filters-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; margin-bottom: 14px; }
+  .filters-row label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+  .filters-row select { font-family: inherit; font-size: 14px; padding: 8px 32px 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--blue-50); color: var(--ink); min-width: 160px; }
+  .count-note { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+  table.log { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 760px; }
+  table.log th { text-align: left; font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); background: var(--blue-50); padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  table.log td { padding: 10px 12px; border-bottom: 1px solid var(--line); color: var(--ink-2); white-space: nowrap; }
+  table.log tr:last-child td { border-bottom: 0; }
+  table.log tbody tr:hover td { background: var(--blue-50); }
+  table.log td.old { color: var(--ink-3); text-decoration: line-through; text-decoration-color: rgba(106,124,152,.45); }
+  .sevpill { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 2px 9px; border-radius: 999px; }
+  .sevpill.risk { background: var(--navy-700); color: var(--white); }
+  .sevpill.watch { background: var(--blue-200); color: var(--navy-700); }
+  .sevpill.info { background: var(--blue-50); color: var(--blue-500); border: 1px solid var(--blue-200); }
+  .empty-row { text-align: center; color: var(--ink-3); padding: 20px !important; }
+  .note { font-size: 12.5px; color: var(--ink-3); margin: 12px 0 0; }
+
+  .insight-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 28px 0 16px; }
+  .insight-tabs button { font-family: inherit; font-size: 14px; font-weight: 500; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--white); color: var(--ink-2); cursor: pointer; transition: all .2s; }
+  .insight-tabs button:hover { border-color: var(--blue-300); }
+  .insight-tabs button.active { background: var(--navy-800); border-color: var(--navy-800); color: var(--white); }
+  .insight { padding: 28px 30px; }
+  .insight-head { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 16px; }
+  .insight-head h4 { font-size: 22px; font-weight: 700; margin-top: 8px; }
+  .kpis { display: flex; gap: 10px; flex-wrap: wrap; }
+  .kpis div { padding: 10px 14px; border-radius: 12px; background: var(--blue-50); border: 1px solid var(--line); min-width: 110px; }
+  .kpis span { display: block; font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+  .kpis b { font-size: 20px; font-weight: 700; color: var(--navy-800); font-variant-numeric: tabular-nums; }
+  .insight-text { font-size: 16px; line-height: 1.7; color: var(--ink-2); }
+  .insight-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .insight-foot .lbl { display: block; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--blue-500); margin-bottom: 4px; }
+  .insight-foot p { margin: 0; font-size: 15px; }
+  #insights .pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--blue-100); color: var(--navy-700); }
+  @media (max-width: 980px) { .chart-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 720px) {
+    .hbar { grid-template-columns: 120px 1fr 34px; font-size: 13px; }
+    .donut-wrap { grid-template-columns: 1fr; justify-items: center; }
+    .insight-foot { grid-template-columns: 1fr; }
+    .insight { padding: 22px; }
+    .count-note { margin-left: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+
+<nav class="nav" aria-label="Sections">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="dot"></span><span class="full">← Jen Cuneo</span></a>
+    <ul>
+      <li><a class="link" href="#overview">Overview</a></li>
+      <li><a class="link" href="#situation">Situation</a></li>
+      <li><a class="link" href="#action">Action</a></li>
+      <li><a class="link" href="#changelog">Change log</a></li>
+      <li><a class="link" href="#insights">Insights</a></li>
+      <li><a class="link" href="#result">Result</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="status"><span class="pulse"></span>Python · Programmatic · Hackathon build</div>
+    <h1>Argus <span>Change Log &amp; Insights</span></h1>
+    <p class="lede">An automated change log and insight engine for programmatic campaigns. It tracks every change made in DV360, then explains how those changes moved performance.</p>
+    <dl class="meta">
+      <div><dt>Role</dt><dd>Designed and built end to end</dd></div>
+      <div><dt>Context</dt><dd>Programmatic team managing 100+ display, video and YouTube campaigns for a hospitality client</dd></div>
+      <div><dt>Result</dt><dd>10+ hours saved every week on change tracking and reporting</dd></div>
+      <div><dt>Part one</dt><dd>Change log built in Python from DV360 Structured Data Files</dd></div>
+      <div><dt>Part two</dt><dd>Performance insights from Funnel data, tied to the changes that caused them</dd></div>
+      <div><dt>Stack</dt><dd>Python, pandas, DV360 SDF, Google Apps Script, Google Sheets, Funnel</dd></div>
+    </dl>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ OVERVIEW ============ -->
+<section id="overview">
+  <div class="wrap">
+    <div class="eyebrow reveal">At a glance</div>
+    <h2 class="reveal">What it does</h2>
+    <div class="stats">
+      <div class="card stat feature reveal"><div class="num">10+ hrs</div><div class="label">Saved every week on change tracking and reporting</div></div>
+      <div class="card stat reveal"><div class="num" data-count="466">466</div><div class="label">Changes caught in a single run, each one labelled and scored</div></div>
+      <div class="card stat reveal"><div class="num">300+</div><div class="label">Line items tracked in an explorable change log</div></div>
+      <div class="card stat reveal"><div class="num">100+</div><div class="label">Campaigns with insights written automatically each month</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SITUATION ============ -->
+<section id="situation" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">Situation</div>
+    <h2 class="reveal">Lots of changes, no record of them</h2>
+    <p class="section-lede reveal">The team ran 100+ programmatic campaigns across hundreds of line items. Budgets, pacing, targeting and creatives changed every week, often by different people.</p>
+
+    <div class="ba reveal">
+      <div class="card">
+        <h4>Before</h4>
+        <div class="chips">
+          <span class="chip old">Changes made in the platform UI</span>
+          <span class="chip old">No history of who changed what</span>
+          <span class="chip old">Manual month-over-month pulls</span>
+          <span class="chip old">Insights written by hand</span>
+        </div>
+        <p>When performance moved, nobody could quickly say why. Reporting meant exporting data, comparing months in spreadsheets and writing commentary for each campaign, which took hours every week.</p>
+      </div>
+      <div class="arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+      <div class="card after">
+        <h4>After</h4>
+        <div class="chips">
+          <span class="chip new hi">Every change logged</span>
+          <span class="chip new hi">Scored by risk</span>
+          <span class="chip new">Filter by campaign, IO or line item</span>
+          <span class="chip new">Insights written automatically</span>
+        </div>
+        <p>A single change log shows exactly what changed, when, and how risky it was. Monthly insights explain what happened to performance and link it back to the optimizations behind it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ACTION ============ -->
+<section id="action">
+  <div class="wrap">
+    <div class="eyebrow reveal">Action</div>
+    <h2 class="reveal">How it works</h2>
+    <p class="section-lede reveal">Two connected parts. The first records every change. The second reads performance data and uses the change log to explain the results.</p>
+
+    <div class="card diagram reveal">
+      <svg viewBox="0 0 1000 440" role="img" aria-label="Argus pipeline: DV360 snapshots are compared in Python, posted to a Google Sheets change log, then combined with Funnel performance data to write insights">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1A3F7A"/></marker>
+          <linearGradient id="core" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0F2C5C"/><stop offset="1" stop-color="#061430"/></linearGradient>
+          <filter id="sh" x="-10%" y="-10%" width="120%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0A1F44" flood-opacity=".12"/></filter>
+        </defs>
+        <!-- lanes -->
+        <rect x="10" y="20" width="980" height="190" rx="14" fill="#F3F8FF" stroke="#C7DDFB"/>
+        <rect x="10" y="230" width="980" height="190" rx="14" fill="#F3F8FF" stroke="#C7DDFB"/>
+        <text x="30" y="48" font-size="11" font-weight="700" letter-spacing="1.4" fill="#2F6FD6">PART ONE · CHANGE LOG</text>
+        <text x="30" y="258" font-size="11" font-weight="700" letter-spacing="1.4" fill="#2F6FD6">PART TWO · PERFORMANCE INSIGHTS</text>
+
+        <!-- part one boxes -->
+        <g filter="url(#sh)">
+          <rect x="30" y="80" width="170" height="96" rx="12" fill="#fff" stroke="#93BDF7"/>
+          <rect x="250" y="70" width="230" height="116" rx="12" fill="url(#core)"/>
+          <rect x="530" y="80" width="180" height="96" rx="12" fill="#fff" stroke="#93BDF7"/>
+          <rect x="760" y="70" width="210" height="116" rx="12" fill="#fff" stroke="#93BDF7"/>
+        </g>
+        <g text-anchor="middle" font-family="Inter, system-ui, sans-serif">
+          <text x="115" y="112" font-size="13.5" font-weight="700" fill="#0B1B36">DV360 SDFs</text>
+          <text x="115" y="132" font-size="11" fill="#6A7C98">two snapshots</text>
+          <text x="115" y="148" font-size="11" fill="#6A7C98">campaigns · IOs · line items</text>
+          <text x="365" y="100" font-size="14" font-weight="700" fill="#fff">Python diff</text>
+          <text x="365" y="122" font-size="11" fill="#C7DDFB">compare field by field</text>
+          <text x="365" y="139" font-size="11" fill="#C7DDFB">label the change type</text>
+          <text x="365" y="156" font-size="11" fill="#C7DDFB">score Risk · Watch · Info</text>
+          <text x="365" y="173" font-size="11" fill="#C7DDFB">skip anything already logged</text>
+          <text x="620" y="117" font-size="13.5" font-weight="700" fill="#0B1B36">Apps Script</text>
+          <text x="620" y="137" font-size="11" fill="#6A7C98">receives new events</text>
+          <text x="620" y="152" font-size="11" fill="#6A7C98">appends to the sheet</text>
+          <text x="865" y="104" font-size="13.5" font-weight="700" fill="#0B1B36">Change log</text>
+          <text x="865" y="124" font-size="11" fill="#6A7C98">every change, timestamped</text>
+          <text x="865" y="140" font-size="11" fill="#6A7C98">explorer with filters by</text>
+          <text x="865" y="156" font-size="11" fill="#6A7C98">campaign · IO · line item</text>
+        </g>
+        <g stroke="#1A3F7A" stroke-width="1.6" fill="none" marker-end="url(#ah)">
+          <path d="M200 128 H246"/><path d="M480 128 H526"/><path d="M710 128 H756"/>
+        </g>
+
+        <!-- part two boxes -->
+        <g filter="url(#sh)">
+          <rect x="30" y="290" width="170" height="96" rx="12" fill="#fff" stroke="#93BDF7"/>
+          <rect x="250" y="280" width="230" height="116" rx="12" fill="url(#core)"/>
+          <rect x="530" y="290" width="180" height="96" rx="12" fill="#fff" stroke="#93BDF7"/>
+          <rect x="760" y="280" width="210" height="116" rx="12" fill="#C7DDFB" stroke="#93BDF7"/>
+        </g>
+        <g text-anchor="middle" font-family="Inter, system-ui, sans-serif">
+          <text x="115" y="322" font-size="13.5" font-weight="700" fill="#0B1B36">Funnel</text>
+          <text x="115" y="342" font-size="11" fill="#6A7C98">past vs current period</text>
+          <text x="115" y="358" font-size="11" fill="#6A7C98">by campaign · creative</text>
+          <text x="365" y="310" font-size="14" font-weight="700" fill="#fff">Insight engine</text>
+          <text x="365" y="332" font-size="11" fill="#C7DDFB">month-over-month deltas</text>
+          <text x="365" y="349" font-size="11" fill="#C7DDFB">top creative, size, audience</text>
+          <text x="365" y="366" font-size="11" fill="#C7DDFB">format and market splits</text>
+          <text x="365" y="383" font-size="11" fill="#C7DDFB">next-step recommendation</text>
+          <text x="620" y="327" font-size="13.5" font-weight="700" fill="#0B1B36">Change context</text>
+          <text x="620" y="347" font-size="11" fill="#6A7C98">what changed that month</text>
+          <text x="620" y="362" font-size="11" fill="#6A7C98">pulled from part one</text>
+          <text x="865" y="314" font-size="13.5" font-weight="700" fill="#0B1B36">Insights tab</text>
+          <text x="865" y="334" font-size="11" fill="#1A3F7A">mid-month + end-of-month</text>
+          <text x="865" y="350" font-size="11" fill="#1A3F7A">commentary per campaign</text>
+          <text x="865" y="366" font-size="11" fill="#1A3F7A">with optimizations made</text>
+        </g>
+        <g stroke="#1A3F7A" stroke-width="1.6" fill="none" marker-end="url(#ah)">
+          <path d="M200 338 H246"/><path d="M710 338 H756"/>
+          <path d="M530 338 H484"/>
+        </g>
+        <path d="M865 186 C 865 230, 620 240, 620 286" stroke="#5B95F0" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#ah)"/>
+        <text x="738" y="230" font-size="11" fill="#2F6FD6" text-anchor="end">change history feeds the insights</text>
+        <path d="M480 338 C 600 300, 700 300, 756 330" stroke="none" fill="none"/>
+      </svg>
+    </div>
+
+    <div class="paths">
+      <div class="card path reveal">
+        <span class="tag"><i>1</i>Snapshot and compare</span>
+        <h4>Python reads two SDF exports</h4>
+        <p>The notebook picks the two most recent exports by date, then compares every campaign, insertion order and line item field by field.</p>
+      </div>
+      <div class="card path reveal">
+        <span class="tag"><i>2</i>Label and score</span>
+        <h4>Each change gets a type and a severity</h4>
+        <p>Changes are grouped into 16 types, from budget segments to household income targeting, and scored Risk, Watch or Info. Anything already logged is skipped.</p>
+      </div>
+      <div class="card path reveal">
+        <span class="tag"><i>3</i>Explain</span>
+        <h4>Insights cite the changes behind them</h4>
+        <p>The insight engine compares this month to last, finds what drove results, and pulls in the changes made that month so the commentary explains why.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CHANGE LOG ============ -->
+<section id="changelog" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">Output · part one</div>
+    <h2 class="reveal">The change log</h2>
+    <p class="section-lede reveal">One comparison between two snapshots surfaced 466 changes. Here's what they were and how they were scored.</p>
+
+    <div class="chart-grid">
+      <div class="card chart reveal">
+        <div class="chart-head"><strong>Changes by type</strong><span>466 changes · one run</span></div>
+        <div class="hbars" id="hbars">
+          <div class="hbar"><span class="lbl">Budgets and pacing</span><span class="track"><i data-w="100"></i></span><b>212</b></div>
+          <div class="hbar"><span class="lbl">Targeting</span><span class="track"><i data-w="50.9"></i></span><b>108</b></div>
+          <div class="hbar"><span class="lbl">Status (on / off)</span><span class="track"><i data-w="38.7"></i></span><b>82</b></div>
+          <div class="hbar"><span class="lbl">Creative assignments</span><span class="track"><i data-w="12.3"></i></span><b>26</b></div>
+          <div class="hbar"><span class="lbl">Naming and structure</span><span class="track"><i data-w="8.5"></i></span><b>18</b></div>
+          <div class="hbar"><span class="lbl">Flight dates</span><span class="track"><i data-w="5.7"></i></span><b>12</b></div>
+          <div class="hbar"><span class="lbl">Bid strategy</span><span class="track"><i data-w="3.8"></i></span><b>8</b></div>
+        </div>
+      </div>
+      <div class="card chart reveal">
+        <div class="chart-head"><strong>Severity</strong><span>how each change is scored</span></div>
+        <div class="donut-wrap">
+          <svg class="donut" viewBox="0 0 120 120" aria-label="Severity split: 314 Watch, 130 Risk, 22 Info">
+            <circle cx="60" cy="60" r="46" fill="none" stroke="#E3EEFD" stroke-width="18"/>
+            <circle class="seg" cx="60" cy="60" r="46" fill="none" stroke="#93BDF7" stroke-width="18" stroke-dasharray="194.6 289" stroke-dashoffset="0" transform="rotate(-90 60 60)"/>
+            <circle class="seg" cx="60" cy="60" r="46" fill="none" stroke="#0F2C5C" stroke-width="18" stroke-dasharray="80.6 289" stroke-dashoffset="-194.6" transform="rotate(-90 60 60)"/>
+            <circle class="seg" cx="60" cy="60" r="46" fill="none" stroke="#2F6FD6" stroke-width="18" stroke-dasharray="13.6 289" stroke-dashoffset="-275.2" transform="rotate(-90 60 60)"/>
+            <text x="60" y="58" text-anchor="middle" font-size="20" font-weight="800" fill="#0A1F44" font-family="Inter, sans-serif">466</text>
+            <text x="60" y="73" text-anchor="middle" font-size="8" fill="#6A7C98" font-family="Inter, sans-serif">changes</text>
+          </svg>
+          <ul class="sev">
+            <li><i style="background:#0F2C5C"></i><div><b>Risk · 130</b><span>Status and bidding changes, or anything removed from targeting</span></div></li>
+            <li><i style="background:#93BDF7"></i><div><b>Watch · 314</b><span>Budgets, pacing, dates and targeting additions</span></div></li>
+            <li><i style="background:#2F6FD6"></i><div><b>Info · 22</b><span>Housekeeping: naming and structure</span></div></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="window reveal" style="margin-top:28px">
+      <div class="window-bar"><i></i><i></i><i></i><span>change log · explorer</span></div>
+      <div class="explorer">
+        <div class="filters-row">
+          <label>Campaign<select id="fCampaign"><option value="">All</option></select></label>
+          <label>Severity<select id="fSeverity"><option value="">All</option><option>Risk</option><option>Watch</option><option>Info</option></select></label>
+          <span class="count-note" id="rowCount"></span>
+        </div>
+        <div class="table-scroll">
+          <table class="log">
+            <thead><tr><th>Detected</th><th>Campaign</th><th>Item</th><th>Change</th><th>Old</th><th>New</th><th>Severity</th></tr></thead>
+            <tbody id="logBody"></tbody>
+          </table>
+        </div>
+        <p class="note">Sample rows from a real run, with names anonymized. The full log covers 300+ line items.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ INSIGHTS ============ -->
+<section id="insights">
+  <div class="wrap">
+    <div class="eyebrow reveal">Output · part two</div>
+    <h2 class="reveal">Insights that explain the numbers</h2>
+    <p class="section-lede reveal">For each campaign, the engine compares this month with last, finds what drove results, and suggests a next step. Pick a campaign to see a real example (names anonymized).</p>
+
+    <div class="insight-tabs reveal" role="tablist" id="insTabs">
+      <button class="active" data-i="0">Resort A</button>
+      <button data-i="1">City hotel B</button>
+      <button data-i="2">Resort C</button>
+    </div>
+
+    <div class="card insight reveal">
+      <div class="insight-head">
+        <div><span class="pill">End of month</span><h4 id="insTitle">Resort A · April</h4></div>
+        <div class="kpis" id="insKpis"></div>
+      </div>
+      <p class="insight-text" id="insText"></p>
+      <div class="insight-foot">
+        <div><span class="lbl">Changes made</span><p id="insChanges"></p></div>
+        <div><span class="lbl">Next step</span><p id="insNext"></p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RESULT ============ -->
+<section id="result" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">Result</div>
+    <h2 class="reveal">What changed for the team</h2>
+    <div class="impact">
+      <div class="card lead wide reveal"><div class="big">10+ hrs / week</div><h4>Saved on change tracking and reporting</h4><p>No more comparing exports by hand or writing every campaign's commentary from scratch.</p></div>
+      <div class="card wide reveal"><div class="big">Every change</div><h4>Traceable in one place</h4><p>Anyone can filter by campaign, insertion order or line item and see exactly what changed and when.</p></div>
+      <div class="card reveal"><div class="big">Risk first</div><h4>The changes that matter stand out</h4><p>Status and bidding changes, and anything removed from targeting, are flagged as Risk so they get checked first.</p></div>
+      <div class="card reveal"><div class="big">Cause and effect</div><h4>Optimizations tied to results</h4><p>Insights reference the changes made that month, so reporting shows what the team did and what it achieved.</p></div>
+      <div class="card reveal"><div class="big">Reusable</div><h4>Works for any DV360 account</h4><p>It only needs two SDF exports and a performance feed, so other teams can point it at their own campaigns.</p></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span><strong>Argus</strong> · 2026</span>
+    <a href="../index.html#work" style="color:var(--blue-300)">← More projects</a>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  root.classList.add('js');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var bar = document.getElementById('progress');
+  function onScroll() { var h = root.scrollHeight - root.clientHeight; bar.style.width = (h > 0 ? (root.scrollTop / h) * 100 : 0) + '%'; }
+  window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
+  // ---- Explorer sample data (anonymized from a real run)
+  var LOG = [
+    ['May 22','Hotel 1','Prospecting · Display · US','Budget segment (May)','$2,040.56','$2,178.56','Watch'],
+    ['May 22','Hotel 1','Prospecting · Display · INT','Budget segment (May)','$2,040.56','$1,580.56','Watch'],
+    ['May 22','Hotel 1','Prospecting · Display · INT','Status','Active','Paused','Risk'],
+    ['May 22','Hotel 2','Prospecting · Video · US · OTT','Budget segment (May)','$1,877.72','$762.68','Watch'],
+    ['May 22','Hotel 2','Awareness · YouTube · 15s','Pacing amount','$2.00','$11.00','Watch'],
+    ['May 22','Hotel 2','Prospecting · Display · INT','Geography targeting','8 countries','(removed)','Risk'],
+    ['May 22','Hotel 3','Retargeting · Display · US','Budget segment (May)','$5,244.00','$6,739.00','Watch'],
+    ['May 22','Hotel 3','Prospecting · Display · US','Household income targeting','31–40%','(removed)','Risk'],
+    ['May 22','Hotel 3','Prospecting · Display · US','Household income targeting','(none)','11–20%','Watch'],
+    ['May 22','Hotel 3','Prospecting · Display · US','Creative assignments','2 creatives','(removed)','Risk'],
+    ['May 22','Hotel 4','Prospecting · Display · US','Status','Active','Paused','Risk'],
+    ['May 22','Hotel 4','Prospecting · Display · US','Budget segment (May)','$1,073.64','$488.52','Watch'],
+    ['May 22','Hotel 4','Prospecting · Display · US','Line item status','Paused','Active','Risk'],
+    ['May 22','Hotel 4','Retargeting · Display · US','IO name','Old property code','New property code','Info']
+  ];
+  var body = document.getElementById('logBody'), fC = document.getElementById('fCampaign'), fS = document.getElementById('fSeverity'), cnt = document.getElementById('rowCount');
+  Array.from(new Set(LOG.map(function (r) { return r[1]; }))).forEach(function (c) { var o = document.createElement('option'); o.textContent = c; fC.appendChild(o); });
+  function render() {
+    var c = fC.value, s = fS.value, html = '', n = 0;
+    LOG.forEach(function (r) {
+      if ((c && r[1] !== c) || (s && r[6] !== s)) return;
+      n++;
+      html += '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td><td>' + r[3] + '</td><td class="old">' + r[4] + '</td><td>' + r[5] + '</td><td><span class="sevpill ' + r[6].toLowerCase() + '">' + r[6] + '</span></td></tr>';
+    });
+    body.innerHTML = html || '<tr><td colspan="7" class="empty-row">No changes match these filters.</td></tr>';
+    cnt.textContent = n + ' of ' + LOG.length + ' sample rows';
+  }
+  fC.addEventListener('change', render); fS.addEventListener('change', render); render();
+
+  // ---- Insight examples (real engine output, names anonymized)
+  var INS = [
+    { t: 'Resort A · April', k: [['Budget','−19.7%'],['CTR','2.53%'],['CPM','$1.98']],
+      x: 'After a 19.7% decrease in budget, impressions declined by 37.3% vs last month (CPM up 28.1% to $1.98). CTR was 2.53% (+1.19% vs last month). The OTT creative was the top performer with a 3.25% CTR, and In Market audiences drove the strongest CTR (2.89%). By format, Video outperformed Standard Display (3.25% vs 2.26% CTR). By market, INT achieved a higher CTR than US (3.34% vs 1.87%).',
+      c: 'No changes logged for April.',
+      n: 'Shift more delivery toward Video given its stronger engagement.' },
+    { t: 'City hotel B · April', k: [['Impressions','+66.2%'],['CPM','−37.7%'],['Conversions','+8.1%']],
+      x: 'Impressions increased by 66.2% vs last month (CPM down 37.7% to $1.25), indicating more efficient reach at a lower cost. CTR was 1.10%. Total conversions rose 8.1%. Geography targeting changes may have affected delivery mix and regional performance during the month. The "Extraordinary" creative drove the strongest CTR (4.15%), and custom intent audiences led engagement (2.24% CTR).',
+      c: 'One insertion order paused, geography targeting removed on one line item, and pacing adjusted on two YouTube line items.',
+      n: 'Continue to monitor placements and optimize toward higher-value inventory.' },
+    { t: 'Resort C · April', k: [['Budget','−27.5%'],['Impressions','+15.2%'],['Conversions','+44.4%']],
+      x: 'After a 27.5% decrease in budget, impressions increased by 15.2% vs last month (CPM down 37.1% to $0.49). Total conversions were up 44.4% vs last month. The 336x280 size drove the highest CTR (0.53%), and custom intent audiences drove the strongest CTR (0.23%).',
+      c: 'No changes logged for April.',
+      n: 'Continue to monitor placements and optimize toward higher-value inventory.' }
+  ];
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('#insTabs button'));
+  function showIns(i) {
+    var d = INS[i];
+    document.getElementById('insTitle').textContent = d.t;
+    document.getElementById('insText').textContent = d.x;
+    document.getElementById('insChanges').textContent = d.c;
+    document.getElementById('insNext').textContent = d.n;
+    document.getElementById('insKpis').innerHTML = d.k.map(function (k) { return '<div><span>' + k[0] + '</span><b>' + k[1] + '</b></div>'; }).join('');
+    tabs.forEach(function (b, j) { b.classList.toggle('active', j === i); });
+  }
+  tabs.forEach(function (b) { b.addEventListener('click', function () { showIns(+b.dataset.i); }); });
+  showIns(0);
+
+  // ---- Count-up, reveal, bars
+  function countUp(el) {
+    var target = parseInt(el.getAttribute('data-count'), 10);
+    if (reduce || isNaN(target)) { el.textContent = target; return; }
+    var start = null, dur = 1100;
+    function step(t) { if (!start) start = t; var p = Math.min((t - start) / dur, 1); el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(step); }
+    requestAnimationFrame(step);
+  }
+  function fillBars(scope) { scope.querySelectorAll('.hbar i').forEach(function (i) { i.style.width = i.dataset.w + '%'; }); }
+  if (!('IntersectionObserver' in window)) {
+    document.querySelectorAll('.reveal').forEach(function (e) { e.classList.add('in'); }); fillBars(document); return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      var el = en.target; el.classList.add('in');
+      var n = el.querySelector('[data-count]'); if (n) countUp(n);
+      if (el.querySelector('.hbar')) fillBars(el);
+      io.unobserve(el);
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(function (e) { io.observe(e); });
+
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav a.link')), map = {};
+  links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+  var so = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) { if (en.isIntersecting && map[en.target.id]) { links.forEach(function (a) { a.classList.remove('active'); }); map[en.target.id].classList.add('active'); } });
+  }, { rootMargin: '-45% 0px -50% 0px' });
+  document.querySelectorAll('main section[id]').forEach(function (s) { so.observe(s); });
+})();
+</script>
+</body>
+</html>
