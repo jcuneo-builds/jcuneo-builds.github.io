@@ -1,0 +1,887 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>People Planner Rollout</title>
+<meta name="description" content="Company-wide rollout of a resourcing and allocation planning tool, led as project manager and tech lead.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #061430;
+    --navy-800: #0A1F44;
+    --navy-700: #0F2C5C;
+    --navy-600: #1A3F7A;
+    --blue-500: #2F6FD6;
+    --blue-400: #5B95F0;
+    --blue-300: #93BDF7;
+    --blue-200: #C7DDFB;
+    --blue-100: #E3EEFD;
+    --blue-50:  #F3F8FF;
+    --ink: #0B1B36;
+    --ink-2: #3A4D6B;
+    --ink-3: #6A7C98;
+    --line: #D6E3F5;
+    --white: #FFFFFF;
+    --radius: 14px;
+    --radius-sm: 10px;
+    --shadow-sm: 0 1px 2px rgba(10,31,68,.06), 0 2px 8px rgba(10,31,68,.05);
+    --shadow: 0 1px 2px rgba(10,31,68,.06), 0 12px 32px -8px rgba(10,31,68,.18);
+    --page: 1120px;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+  body {
+    margin: 0;
+    background: var(--blue-50);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .wrap { max-width: var(--page); margin: 0 auto; padding: 0 28px; }
+  a { color: var(--blue-500); }
+  strong { font-weight: 600; color: var(--ink); }
+  p { margin: 0 0 16px; color: var(--ink-2); }
+  h1, h2, h3, h4 { margin: 0; color: var(--ink); letter-spacing: -0.02em; }
+  h2 { font-size: clamp(30px, 4vw, 42px); line-height: 1.1; font-weight: 700; margin-bottom: 18px; }
+  h3 { font-size: 22px; line-height: 1.3; font-weight: 600; margin: 44px 0 12px; }
+  code {
+    font-family: var(--mono); font-size: 0.82em;
+    background: var(--blue-100); color: var(--navy-700);
+    border: 1px solid var(--blue-200); border-radius: 6px; padding: 1px 6px;
+    word-break: break-word;
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 12.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--blue-500); margin-bottom: 14px;
+  }
+  .eyebrow::before { content: ""; width: 22px; height: 2px; background: currentColor; border-radius: 2px; }
+  .section-lede { font-size: 19px; max-width: 760px; }
+
+  /* ---------- Progress + nav ---------- */
+  .progress { position: fixed; top: 0; left: 0; height: 3px; width: 0; z-index: 60;
+    background: linear-gradient(90deg, var(--blue-400), var(--blue-200)); }
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(6,20,48,.82); backdrop-filter: saturate(160%) blur(14px); -webkit-backdrop-filter: saturate(160%) blur(14px);
+    border-bottom: 1px solid rgba(147,189,247,.14);
+  }
+  .nav .wrap { display: flex; align-items: center; gap: 24px; height: 60px; }
+  .nav .brand { color: var(--white); font-weight: 600; font-size: 15px; white-space: nowrap; display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .nav .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--blue-300); box-shadow: 0 0 0 4px rgba(147,189,247,.18); }
+  .nav ul { list-style: none; display: flex; gap: 4px; margin: 0 0 0 auto; padding: 0; overflow-x: auto; scrollbar-width: none; }
+  .nav ul::-webkit-scrollbar { display: none; }
+  .nav a.link { display: block; padding: 6px 11px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: rgba(227,238,253,.72); text-decoration: none; white-space: nowrap; transition: background .2s, color .2s; }
+  .nav a.link:hover { color: var(--white); background: rgba(147,189,247,.12); }
+  .nav a.link.active { color: var(--white); background: rgba(147,189,247,.2); }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    position: relative; overflow: hidden; color: var(--white);
+    background:
+      radial-gradient(900px 480px at 85% -10%, rgba(91,149,240,.42), transparent 60%),
+      radial-gradient(700px 420px at -10% 110%, rgba(47,111,214,.35), transparent 60%),
+      linear-gradient(180deg, var(--navy-900), var(--navy-800));
+    padding: 96px 0 72px;
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(147,189,247,.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(147,189,247,.08) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at 60% 30%, #000 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at 60% 30%, #000 30%, transparent 75%);
+  }
+  .hero .wrap { position: relative; }
+  .status {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 13px; font-weight: 500; color: var(--blue-100);
+    padding: 6px 14px 6px 10px; border-radius: 999px;
+    background: rgba(147,189,247,.12); border: 1px solid rgba(147,189,247,.28);
+  }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: #7FD3FF; position: relative; }
+  .pulse::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid #7FD3FF; opacity: .6; animation: ping 2s infinite; }
+  @keyframes ping { 0% { transform: scale(.6); opacity: .7; } 100% { transform: scale(1.8); opacity: 0; } }
+  .hero h1 { color: var(--white); font-size: clamp(42px, 7vw, 84px); line-height: 1.02; font-weight: 800; letter-spacing: -0.035em; margin: 24px 0 22px; max-width: 900px; }
+  .hero h1 span { background: linear-gradient(90deg, var(--blue-200), var(--blue-400)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero .lede { font-size: clamp(18px, 2vw, 22px); line-height: 1.5; color: rgba(227,238,253,.85); max-width: 720px; margin: 0; }
+  .meta {
+    margin-top: 48px; display: grid; grid-template-columns: repeat(3, 1fr);
+    border: 1px solid rgba(147,189,247,.2); border-radius: var(--radius);
+    background: rgba(10,31,68,.55); backdrop-filter: blur(8px); overflow: hidden;
+  }
+  .meta div { padding: 18px 22px; border-right: 1px solid rgba(147,189,247,.14); border-bottom: 1px solid rgba(147,189,247,.14); }
+  .meta div:nth-child(3n) { border-right: 0; }
+  .meta div:nth-last-child(-n+3) { border-bottom: 0; }
+  .meta dt { font-size: 11.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--blue-300); margin-bottom: 6px; }
+  .meta dd { margin: 0; font-size: 15px; line-height: 1.5; color: var(--blue-50); }
+
+  /* ---------- Sections ---------- */
+  section { padding: 96px 0; }
+  section.alt { background: var(--white); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .card { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+
+  /* ---------- Stats ---------- */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 36px; }
+  .stat { padding: 22px 22px 20px; position: relative; overflow: hidden; transition: transform .25s, box-shadow .25s; }
+  .stat:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .stat .num { font-size: 42px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; color: var(--navy-800); font-variant-numeric: tabular-nums; }
+  .stat .label { font-size: 14.5px; line-height: 1.45; color: var(--ink-2); margin-top: 8px; }
+  .stat .src { font-size: 12px; color: var(--ink-3); margin-top: 12px; font-family: var(--mono); }
+  .stat.feature { background: linear-gradient(150deg, var(--navy-700), var(--navy-900)); border-color: var(--navy-700); }
+  .stat.feature .num, .stat.feature .label { color: var(--white); }
+  .stat.feature .src { color: var(--blue-300); }
+  .stat.feature::after { content: ""; position: absolute; right: -40px; top: -40px; width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle, rgba(91,149,240,.45), transparent 70%); }
+
+  .split { margin-top: 20px; padding: 24px; }
+  .split-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .split-head strong { font-size: 15px; }
+  .split-head span { font-size: 13px; color: var(--ink-3); }
+  .bar { display: flex; height: 14px; border-radius: 999px; overflow: hidden; background: var(--blue-100); }
+  .bar i { display: block; height: 100%; width: 0; transition: width 1.2s cubic-bezier(.2,.7,.2,1); }
+  .bar .b1 { background: var(--navy-700); }
+  .bar .b2 { background: var(--blue-300); }
+  .bar .b3 { background: var(--blue-500); }
+  .legend { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 14px; font-size: 13.5px; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  /* ---------- Before / after ---------- */
+  .ba { display: grid; grid-template-columns: 1fr 56px 1fr; align-items: stretch; margin-top: 36px; }
+  .ba .card { padding: 28px; }
+  .ba h4 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; margin-bottom: 16px; color: var(--ink-3); }
+  .ba .after { background: linear-gradient(160deg, var(--navy-800), var(--navy-900)); border-color: var(--navy-700); box-shadow: var(--shadow); }
+  .ba .after h4 { color: var(--blue-300); }
+  .ba .after p { color: rgba(227,238,253,.82); }
+  .ba p { font-size: 15px; margin: 18px 0 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { font-size: 13.5px; font-weight: 500; padding: 6px 12px; border-radius: 999px; }
+  .chip.old { background: var(--blue-50); color: var(--ink-3); border: 1px dashed #B8C8E0; text-decoration: line-through; text-decoration-color: rgba(106,124,152,.5); }
+  .chip.new { background: rgba(147,189,247,.14); color: var(--blue-100); border: 1px solid rgba(147,189,247,.35); }
+  .chip.new.hi { background: var(--blue-300); color: var(--navy-900); border-color: var(--blue-300); }
+  .arrow { display: flex; align-items: center; justify-content: center; color: var(--blue-500); }
+  .arrow svg { width: 28px; height: 28px; }
+
+  .brief { margin-top: 28px; padding: 24px 28px; border-left: 4px solid var(--blue-500); border-radius: var(--radius-sm); background: var(--blue-100); }
+  .brief p { margin: 0; color: var(--ink); font-size: 17px; }
+
+  /* ---------- Principles ---------- */
+  .principles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 32px; }
+  .principle { padding: 28px; transition: transform .25s, box-shadow .25s; }
+  .principle:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--blue-100); color: var(--blue-500); margin-bottom: 18px; }
+  .icon svg { width: 22px; height: 22px; }
+  .principle h4 { font-size: 19px; font-weight: 600; margin-bottom: 8px; }
+  .principle p { font-size: 15.5px; margin: 0; }
+
+  /* ---------- Workflow ---------- */
+  .flow { margin-top: 32px; padding: 10px; }
+  .flow-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 14px 16px 10px; }
+  .flow-head small { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+  .flow-row { display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: center; padding: 14px 16px; border-radius: 12px; transition: background .2s; }
+  .flow-row:hover { background: var(--blue-50); }
+  .flow-row + .flow-row { border-top: 1px solid var(--line); }
+  .step { display: flex; align-items: center; gap: 14px; }
+  .step .n { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 10px; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+  .step.meta-only .n { background: var(--blue-100); color: var(--navy-700); border: 1px solid var(--blue-200); }
+  .step.reads .n { background: var(--blue-500); color: var(--white); }
+  .step.out .n { background: var(--navy-800); color: var(--white); }
+  .step b { display: block; font-size: 15.5px; font-weight: 600; line-height: 1.3; }
+  .step small { display: block; font-size: 12.5px; color: var(--ink-3); line-height: 1.35; }
+  .flow-row p { margin: 0; font-size: 15px; line-height: 1.55; }
+  .count { display: flex; align-items: baseline; gap: 8px; padding-left: 16px; border-left: 2px solid var(--blue-200); }
+  .count strong { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--navy-800); }
+  .count span { font-size: 13px; color: var(--ink-2); line-height: 1.3; }
+  .count code { font-size: 11px; display: block; margin-top: 2px; width: fit-content; }
+  .flow-row.final { background: linear-gradient(90deg, var(--blue-100), transparent); }
+  .flow-row.final .count strong { color: var(--blue-500); }
+  .divider { display: flex; align-items: center; gap: 14px; padding: 10px 16px; font-size: 12.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--blue-500); }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 0; border-top: 1.5px dashed var(--blue-300); }
+  .flow .legend { padding: 10px 16px 8px; }
+
+  /* ---------- Architecture ---------- */
+  .diagram { margin-top: 32px; padding: 18px; overflow-x: auto; }
+  .diagram svg { display: block; width: 100%; min-width: 820px; height: auto; font-family: 'Inter', system-ui, sans-serif; }
+  .paths { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 18px; }
+  .path { padding: 26px; }
+  .tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; letter-spacing: .04em; padding: 4px 12px; border-radius: 999px; background: var(--blue-100); color: var(--navy-700); margin-bottom: 14px; }
+  .tag i { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--navy-700); color: var(--white); font-style: normal; font-size: 11px; }
+  .path h4 { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .path p { font-size: 15px; margin: 0; }
+
+  /* ---------- Technical ---------- */
+  .tech-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .tech-grid .card { padding: 26px; }
+  .tech-grid h4 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+  .tech-grid p { font-size: 15.5px; margin: 0; }
+  .formula { display: grid; grid-template-columns: 1.1fr 1fr; gap: 0; overflow: hidden; margin-top: 18px; }
+  .formula .eq { white-space: nowrap; overflow-x: auto; background: var(--navy-900); color: var(--blue-100); padding: 26px 28px; font-family: var(--mono); font-size: 14px; line-height: 2; }
+  .formula .eq .k { color: var(--blue-300); }
+  .formula .eq .c { color: #7E93B5; }
+  .formula .why { padding: 26px 28px; }
+  .formula .why p { font-size: 15.5px; }
+  .formula .why p:last-child { margin: 0; }
+
+  .checks { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .checks li { display: flex; gap: 14px; padding: 20px; }
+  .checks li .tick { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 8px; background: var(--blue-100); color: var(--blue-500); display: grid; place-items: center; }
+  .checks li .tick svg { width: 14px; height: 14px; }
+  .checks li div { font-size: 15px; line-height: 1.55; color: var(--ink-2); }
+  .checks li strong { display: block; color: var(--ink); margin-bottom: 2px; }
+
+  /* ---------- Mock frames ---------- */
+  .output-grid { display: grid; grid-template-columns: 1fr 1.25fr; gap: 28px; align-items: start; margin-top: 28px; }
+  .output-item h3 { margin-top: 0; display: flex; align-items: center; gap: 12px; }
+  .output-item h3 .n { width: 30px; height: 30px; border-radius: 9px; background: var(--navy-800); color: var(--white); display: grid; place-items: center; font-size: 14px; font-weight: 700; }
+  .output-item > p { font-size: 15.5px; }
+  .window { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); background: var(--white); box-shadow: var(--shadow); }
+  .window-bar { display: flex; align-items: center; gap: 7px; padding: 11px 14px; background: var(--blue-50); border-bottom: 1px solid var(--line); }
+  .window-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--blue-200); }
+  .window-bar span { margin-left: 10px; font-size: 12px; color: var(--ink-3); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .consent { padding: 0; }
+  .consent-top { height: 72px; background: linear-gradient(120deg, var(--navy-800), var(--blue-500)); position: relative; }
+  .consent-top::after { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,.18) 1px, transparent 1px); background-size: 14px 14px; }
+  .consent-body { padding: 0 28px 26px; }
+  .consent-check { width: 56px; height: 56px; border-radius: 50%; background: var(--white); border: 4px solid var(--white); box-shadow: var(--shadow); display: grid; place-items: center; margin-top: -28px; position: relative; }
+  .consent-check div { width: 100%; height: 100%; border-radius: 50%; background: var(--blue-500); color: var(--white); display: grid; place-items: center; }
+  .consent-check svg { width: 22px; height: 22px; }
+  .consent h5 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 16px 0 4px; }
+  .consent .as { font-size: 14.5px; color: var(--ink-2); margin-bottom: 18px; }
+  .conn { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; background: var(--blue-50); border: 1px solid var(--blue-200); font-size: 14.5px; font-weight: 600; margin-bottom: 8px; }
+  .conn svg { width: 16px; height: 16px; color: var(--blue-500); }
+  .conn span { margin-left: auto; font-size: 12px; font-weight: 500; color: var(--blue-500); }
+  .consent-foot { border-top: 1px solid var(--line); padding: 16px 28px 20px; font-size: 13.5px; color: var(--ink-2); line-height: 1.55; }
+
+  .notion { padding: 26px 30px 28px; }
+  .crumb { font-size: 12.5px; color: var(--ink-3); margin-bottom: 8px; }
+  .notion h5 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 18px; }
+  .props { display: grid; grid-template-columns: 190px 1fr; row-gap: 7px; font-size: 14px; margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+  .props dt { color: var(--ink-3); }
+  .props dd { margin: 0; color: var(--ink); }
+  .pill { display: inline-block; font-size: 12px; font-weight: 500; padding: 1px 9px; border-radius: 6px; background: var(--blue-100); color: var(--navy-700); }
+  .pill.dark { background: var(--navy-700); color: var(--white); }
+  .score { font-weight: 700; }
+  .meter { display: inline-block; vertical-align: middle; width: 90px; height: 6px; border-radius: 9px; background: var(--blue-100); margin-left: 10px; overflow: hidden; }
+  .meter i { display: block; height: 100%; background: linear-gradient(90deg, var(--blue-400), var(--navy-700)); }
+  .notion h6 { font-size: 15px; font-weight: 700; margin: 0 0 8px; }
+  .notion ul { margin: 0 0 18px; padding-left: 20px; font-size: 14px; color: var(--ink-2); }
+  .notion ul li { margin-bottom: 4px; }
+  .todo { list-style: none; padding: 0 !important; }
+  .todo li { display: flex; gap: 10px; align-items: baseline; }
+  .todo li::before { content: ""; width: 13px; height: 13px; flex: 0 0 13px; border: 1.5px solid var(--blue-300); border-radius: 4px; transform: translateY(2px); }
+  .todo small { color: var(--ink-3); }
+
+  .terminal { background: var(--navy-900); border-color: #12284F; }
+  .terminal .window-bar { background: #0B1D3D; border-color: #12284F; }
+  .terminal .window-bar i { background: #22406F; }
+  .terminal .window-bar span { color: #7E93B5; }
+  .terminal pre { margin: 0; padding: 20px 22px 22px; font-family: var(--mono); font-size: 12.5px; line-height: 1.85; color: #C9D8F2; overflow-x: auto; }
+  .t-c { color: #6F86AD; }
+  .t-k { color: var(--blue-300); }
+  .t-x { color: #9FC3FF; }
+  .t-r { color: #E3EEFD; text-decoration: underline; text-decoration-color: rgba(147,189,247,.4); text-underline-offset: 3px; }
+  .t-ok { color: #7FD3FF; }
+  .t-tot { color: var(--white); font-weight: 500; }
+
+  /* ---------- Impact ---------- */
+  .impact { display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; margin-top: 32px; }
+  .impact .card { padding: 26px; grid-column: span 2; transition: transform .25s, box-shadow .25s; }
+  .impact .card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .impact .card.wide { grid-column: span 3; }
+  .impact .card.lead { background: linear-gradient(150deg, var(--navy-700), var(--navy-900)); border-color: var(--navy-700); }
+  .impact .card.lead h4, .impact .card.lead .big { color: var(--white); }
+  .impact .card.lead p { color: rgba(227,238,253,.82); }
+  .impact .big { font-size: 38px; font-weight: 700; letter-spacing: -0.03em; color: var(--navy-800); line-height: 1; margin-bottom: 14px; }
+  .impact h4 { font-size: 17px; font-weight: 600; margin-bottom: 6px; line-height: 1.35; }
+  .impact p { font-size: 15px; margin: 0; }
+
+  /* ---------- Next / lessons ---------- */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; }
+  .timeline { list-style: none; padding: 0; margin: 24px 0 0; position: relative; }
+  .timeline::before { content: ""; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: linear-gradient(var(--blue-400), var(--blue-100)); }
+  .timeline li { position: relative; padding: 0 0 24px 34px; font-size: 15.5px; color: var(--ink-2); }
+  .timeline li::before { content: ""; position: absolute; left: 0; top: 6px; width: 16px; height: 16px; border-radius: 50%; background: var(--white); border: 3px solid var(--blue-500); }
+  .timeline li strong { display: block; margin-bottom: 2px; }
+  .lessons { display: grid; gap: 14px; margin-top: 24px; }
+  .lesson { padding: 20px 22px; display: flex; gap: 16px; }
+  .lesson .q { font-size: 30px; line-height: .9; font-weight: 800; color: var(--blue-300); font-family: Georgia, serif; }
+  .lesson div { font-size: 15px; color: var(--ink-2); }
+  .lesson strong { display: block; margin-bottom: 2px; }
+
+  /* ---------- Footer ---------- */
+  footer { background: var(--navy-900); color: rgba(227,238,253,.7); padding: 40px 0; font-size: 14px; }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  footer strong { color: var(--white); }
+
+  /* ---------- Reveal ---------- */
+  .js .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
+  .js .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .js .reveal { opacity: 1; transform: none; transition: none; }
+    .pulse::after { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 980px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .principles, .paths { grid-template-columns: 1fr; }
+    .output-grid { grid-template-columns: 1fr; }
+    .impact { grid-template-columns: 1fr 1fr; }
+    .impact .card, .impact .card.wide { grid-column: span 1; }
+    .impact .card.lead { grid-column: span 2; }
+    .formula { grid-template-columns: 1fr; }
+    .flow-row { grid-template-columns: 200px 1fr; }
+    .flow-row .count { grid-column: 2; }
+  }
+  @media (max-width: 720px) {
+    body { font-size: 16px; }
+    .wrap { padding: 0 16px; }
+    section { padding: 64px 0; }
+    .hero { padding: 64px 0 48px; }
+    .nav .brand span.full { display: none; }
+    .meta { grid-template-columns: 1fr; }
+    .meta div { border-right: 0 !important; border-bottom: 1px solid rgba(147,189,247,.14) !important; }
+    .meta div:last-child { border-bottom: 0 !important; }
+    .stat .num { font-size: 34px; }
+    .ba { grid-template-columns: 1fr; gap: 0; }
+    .arrow { height: 44px; transform: rotate(90deg); }
+    .tech-grid, .checks, .cols { grid-template-columns: 1fr; }
+    .cols { gap: 24px; }
+    .impact { grid-template-columns: 1fr; }
+    .impact .card, .impact .card.wide, .impact .card.lead { grid-column: span 1; }
+    .flow-row { grid-template-columns: 1fr; gap: 10px; }
+    .flow-row .count { grid-column: 1; }
+    .props { grid-template-columns: 1fr; row-gap: 2px; }
+    .props dd { margin-bottom: 8px; }
+    .notion { padding: 22px; }
+    .consent-body, .consent-foot { padding-left: 20px; padding-right: 20px; }
+  }
+  /* ---------- Slack mock ---------- */
+  .slack { padding: 22px 24px 24px; }
+  .msg { display: flex; gap: 12px; }
+  .avatar { flex: 0 0 38px; width: 38px; height: 38px; border-radius: 9px; background: linear-gradient(150deg, var(--navy-700), var(--blue-500)); color: var(--white); display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+  .msg-main { min-width: 0; }
+  .msg-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+  .msg-head b { font-size: 15px; }
+  .msg-head .app { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: var(--blue-100); color: var(--ink-3); }
+  .msg-head small { font-size: 12px; color: var(--ink-3); }
+  .msg-main p { font-size: 14.5px; margin: 0 0 10px; color: var(--ink); line-height: 1.5; }
+  .msg-main ul { margin: 0 0 12px; padding-left: 20px; font-size: 14.5px; color: var(--ink); }
+  .msg-main ul li { margin-bottom: 3px; }
+  .msg-main .prac { font-style: italic; color: var(--ink-2); margin: 0 0 2px; }
+  .msg-main .fine { font-size: 13px; color: var(--ink-2); margin: 6px 0 0; }
+
+  /* ---------- People Planner mock ---------- */
+  .pp-wrap { overflow-x: auto; }
+  .pp { width: 100%; min-width: 860px; border-collapse: collapse; font-size: 13.5px; }
+  .pp th, .pp td { padding: 11px 12px; text-align: center; border-bottom: 1px solid var(--line); white-space: nowrap; color: var(--ink); }
+  .pp th { font-size: 12px; font-weight: 600; color: var(--ink-2); background: var(--blue-50); }
+  .pp th small, .pp td small { display: block; font-size: 10.5px; font-weight: 500; color: var(--ink-3); }
+  .pp .lft { text-align: left; font-weight: 600; }
+  .pp tr.sum td { background: var(--blue-50); font-size: 12.5px; color: var(--ink-2); font-weight: 500; }
+  .pp .pipe { background: var(--blue-100) !important; }
+  .pp .nc { background: #F7F9FC; color: var(--ink-2); }
+  .pp .warn { background: #FDE9E2; color: #9A3B1E; font-weight: 600; }
+  .pp tr.open td { background: #EEF5FF; color: var(--navy-600); }
+  .pp tr.leave td.lft::after { content: "final month"; display: block; font-size: 10.5px; font-weight: 500; color: #B4462A; }
+  .r { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; font-size: 11px; font-weight: 700; vertical-align: middle; margin-right: 6px; }
+  .pp .r { margin: 0 0 0 4px; }
+  .r.s { background: var(--navy-800); color: #fff; }
+  .r.l { background: var(--blue-500); color: #fff; }
+  .r.c { background: var(--blue-100); color: var(--navy-700); border: 1px solid var(--blue-200); }
+  .bm { display: inline-block; vertical-align: middle; width: 70px; height: 6px; border-radius: 9px; background: var(--blue-100); margin-right: 8px; overflow: hidden; }
+  .bm i { display: block; height: 100%; background: linear-gradient(90deg, var(--blue-400), var(--navy-700)); }
+  #product .legend .r { margin-right: 4px; }
+  .checks li a { font-weight: 600; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+
+<nav class="nav" aria-label="Sections">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="dot"></span><span class="full">← Jen Cuneo</span></a>
+    <ul>
+      <li><a class="link" href="#problem">Problem</a></li>
+      <li><a class="link" href="#solution">Solution</a></li>
+      <li><a class="link" href="#rollout">Rollout</a></li>
+      <li><a class="link" href="#architecture">Data</a></li>
+      <li><a class="link" href="#product">Product</a></li>
+      <li><a class="link" href="#feedback">Feedback</a></li>
+      <li><a class="link" href="#impact">Results</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="status"><span class="pulse"></span>Live company-wide</div>
+    <h1>People Planner: <span>Company-wide Rollout</span></h1>
+    <p class="lede">Taking resourcing out of spreadsheets and into one planning tool every leader uses: who works on which client, at what allocation and in what role, tied to revenue, staff cost and margin.</p>
+    <dl class="meta">
+      <div><dt>Organization</dt><dd>Global media agency (~1,000 people)</dd></div>
+      <div><dt>My role</dt><dd>Project manager and tech lead, from brief to full adoption</dd></div>
+      <div><dt>Timeline</dt><dd>2026. Alpha and production launch in July, company-wide adoption by November</dd></div>
+      <div><dt>Partners</dt><dd>Engineering, Data Warehouse, Finance, practice and hive leadership</dd></div>
+      <div><dt>Stack</dt><dd>Internal web platform, data warehouse, connected Google Sheets, HubSpot, Notion, Slack</dd></div>
+      <div><dt>Status</dt><dd>Live. Every leader plans in it and every direct employee is allocated</dd></div>
+    </dl>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ PROBLEM ============ -->
+<section id="problem" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">The problem</div>
+    <h2 class="reveal">Resourcing ran on spreadsheets nobody trusted</h2>
+    <p class="section-lede reveal">Staffing decisions for 400+ people lived in disconnected sheets owned by different teams. Revenue sat in finance forecasts, people data in HR, deals in HubSpot and hours in time tracking, and none of it lined up.</p>
+
+    <div class="ba reveal">
+      <div class="card">
+        <h4>Before</h4>
+        <div class="chips">
+          <span class="chip old">A spreadsheet per team</span>
+          <span class="chip old">No link to revenue or cost</span>
+          <span class="chip old">Manual month-end reconciliation</span>
+          <span class="chip old">Hiring before checking capacity</span>
+        </div>
+        <p>Leaders couldn't see revenue per head, staff cost or margin for a practice or client without days of manual work, and the numbers were out of date by the time they arrived.</p>
+      </div>
+      <div class="arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+      <div class="card after">
+        <h4>After</h4>
+        <div class="chips">
+          <span class="chip new hi">One planning tool</span>
+          <span class="chip new hi">Synced daily from the warehouse</span>
+          <span class="chip new">Rev/head, staff cost and CM% live</span>
+          <span class="chip new">Practice, hive and client views</span>
+          <span class="chip new">Monthly lock and cadence</span>
+        </div>
+        <p>Allocation, financial and people data in one place, so leaders plan next month with the numbers in front of them and the whole company works from the same forecast.</p>
+      </div>
+    </div>
+
+    <div class="brief reveal"><p><strong>The brief:</strong> give every practice and hive leader one tool to plan allocations against live revenue and cost, roll it out company-wide on a fixed timeline, and get to full adoption, with every direct employee allocated, not a pilot that fades.</p></div>
+  </div>
+</section>
+
+<!-- ============ SOLUTION ============ -->
+<section id="solution">
+  <div class="wrap">
+    <div class="eyebrow reveal">The solution</div>
+    <h2 class="reveal">One source of truth for people, clients and money</h2>
+    <p class="section-lede reveal">People Planner shows every person's monthly split across clients, their role on each one, and what that means financially. Change an allocation and revenue per head, staff cost and client margin update on the spot. Behind it, the data warehouse feeds revenue, people, deals and actual hours into the tool every morning.</p>
+    <div class="stats">
+      <div class="card stat feature reveal"><div class="num">100%</div><div class="label">of leaders actively planning in the tool, with every direct employee allocated</div><div class="src">full adoption</div></div>
+      <div class="card stat reveal"><div class="num">400+</div><div class="label">people planned across practices and hives</div><div class="src">company-wide</div></div>
+      <div class="card stat reveal"><div class="num" data-count="158">158</div><div class="label">feedback items logged and triaged, 140 shipped</div><div class="src">89% delivered</div></div>
+      <div class="card stat reveal"><div class="num" data-count="86">86</div><div class="label">release batches shipped between August and October</div><div class="src">iterate fast</div></div>
+    </div>
+    <div class="principles" style="margin-top:20px">
+      <div class="card principle reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></div>
+        <h4>Financials at every level</h4>
+        <p>Revenue per head, staff cost ratio and contribution margin at the person, practice, hive and client level, all from the same allocations.</p>
+      </div>
+      <div class="card principle reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div>
+        <h4>A monthly rhythm, not a one-off</h4>
+        <p>Actuals land, leads review, resourcing calls happen, the month locks and everyone hears their allocations. Same steps every month.</p>
+      </div>
+      <div class="card principle reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/></svg></div>
+        <h4>Built with the people who use it</h4>
+        <p>Focus groups, an alpha with leads and a public feedback board shaped every release, so the tool fits how leaders actually staff accounts.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ROLLOUT ============ -->
+<section id="rollout" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">My role</div>
+    <h2 class="reveal">Project manager and tech lead, brief to full adoption</h2>
+    <p class="section-lede reveal">I owned the plan, the backlog and the deadlines, translated what leaders needed into requirements for engineering and the data warehouse team, and kept the rollout moving until the tool was part of how the company runs.</p>
+
+    <div class="card flow reveal">
+      <div class="flow-head"><strong>The rollout, phase by phase</strong><small>2026</small></div>
+
+      <div class="flow-row">
+        <div class="step meta-only"><span class="n">1</span><div><b>Brief and data model</b><small>Q2</small></div></div>
+        <p>Scoped the tool with finance and leadership: allocations by head rather than hours, role weighting, financial-year revenue and cost, and the data sources it would need from the warehouse.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step reads"><span class="n">2</span><div><b>Alpha and focus groups</b><small>June to July</small></div></div>
+        <p>Ran an alpha with practice and hive leads, gathered feedback in focus groups, and turned it into a prioritised backlog before launch.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step reads"><span class="n">3</span><div><b>Production launch</b><small>July</small></div></div>
+        <p>Shipped to production in daily pushes: practice, hive and client views, permissions by practice and hive, revenue per head breakdowns and a lock date that respects working days and bank holidays.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step reads"><span class="n">4</span><div><b>Feedback loop at speed</b><small>August to October</small></div></div>
+        <p>Ran a public feedback board triaged by category and priority, grouped fixes into release batches, and shipped 140 of 158 items across 86 batches: variance views, non-client time, exports, custom tags and parent-client roll-ups.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step reads"><span class="n">5</span><div><b>Closing the data loop</b><small>October</small></div></div>
+        <p>With the data warehouse team, got locked allocations flowing back into the warehouse every month, so planned and actual time can be compared and reported on anywhere.</p>
+      </div>
+      <div class="flow-row final">
+        <div class="step out"><span class="n">6</span><div><b>Full adoption</b><small>November</small></div></div>
+        <p>Standardised the rules (non-client caps by level, one Sponsor and one Lead per group, revenue per head benchmarks by level), published best practices, and reached every leader actively planning with every direct employee allocated.</p>
+      </div>
+
+      <div class="legend">
+        <span><i style="background:var(--blue-100);border:1px solid var(--blue-200)"></i>Discovery</span>
+        <span><i style="background:var(--blue-500)"></i>Build and launch</span>
+        <span><i style="background:var(--navy-800)"></i>Adoption</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ARCHITECTURE ============ -->
+<section id="architecture">
+  <div class="wrap">
+    <div class="eyebrow reveal">Data</div>
+    <h2 class="reveal">Five source systems, one daily sync, a closed loop</h2>
+    <p class="section-lede reveal">I worked hand in hand with the data warehouse team to connect every source the tool depends on, troubleshoot mismatches, and send locked allocations back into the warehouse each month.</p>
+
+    <div class="card diagram reveal">
+      <svg viewBox="0 0 1000 470" role="img" aria-label="Data architecture: HubSpot, finance forecast, HR system, recruiting and time tracking load into the data warehouse nightly, refresh connected sheets, and sync into People Planner each morning; locked allocations export back to the warehouse monthly">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1A3F7A"/></marker>
+          <marker id="ahl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5B95F0"/></marker>
+          <linearGradient id="pipe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0F2C5C"/><stop offset="1" stop-color="#061430"/></linearGradient>
+          <filter id="sh" x="-10%" y="-10%" width="120%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0A1F44" flood-opacity=".12"/></filter>
+        </defs>
+
+        <text x="20" y="28" font-size="11" font-weight="700" letter-spacing="1.5" fill="#6A7C98">SOURCES</text>
+        <text x="240" y="28" font-size="11" font-weight="700" letter-spacing="1.5" fill="#2F6FD6">DATA WAREHOUSE TEAM</text>
+        <text x="640" y="28" font-size="11" font-weight="700" letter-spacing="1.5" fill="#2F6FD6">PEOPLE PLANNER</text>
+        <text x="850" y="28" font-size="11" font-weight="700" letter-spacing="1.5" fill="#6A7C98">DOWNSTREAM</text>
+        <rect x="225" y="40" width="390" height="340" rx="14" fill="#F3F8FF" stroke="#93BDF7" stroke-dasharray="6 5"/>
+
+        <g filter="url(#sh)">
+          <rect x="20" y="50" width="170" height="56" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="20" y="118" width="170" height="56" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="20" y="186" width="170" height="56" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="20" y="254" width="170" height="56" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="20" y="322" width="170" height="56" rx="10" fill="#fff" stroke="#93BDF7"/>
+        </g>
+        <g text-anchor="middle">
+          <text x="105" y="74" font-size="13" font-weight="700" fill="#0B1B36">HubSpot</text>
+          <text x="105" y="92" font-size="10.5" fill="#6A7C98">deals, pipeline, hives</text>
+          <text x="105" y="142" font-size="13" font-weight="700" fill="#0B1B36">Finance forecast</text>
+          <text x="105" y="160" font-size="10.5" fill="#6A7C98">client revenue, budgets</text>
+          <text x="105" y="210" font-size="13" font-weight="700" fill="#0B1B36">HR system</text>
+          <text x="105" y="228" font-size="10.5" fill="#6A7C98">people, levels, cost, dates</text>
+          <text x="105" y="278" font-size="13" font-weight="700" fill="#0B1B36">Recruiting</text>
+          <text x="105" y="296" font-size="10.5" fill="#6A7C98">open roles, start dates</text>
+          <text x="105" y="346" font-size="13" font-weight="700" fill="#0B1B36">Time tracking</text>
+          <text x="105" y="364" font-size="10.5" fill="#6A7C98">actual hours by client</text>
+        </g>
+
+        <g filter="url(#sh)">
+          <rect x="245" y="140" width="165" height="140" rx="12" fill="url(#pipe)"/>
+          <rect x="435" y="170" width="160" height="80" rx="10" fill="#fff" stroke="#93BDF7"/>
+        </g>
+        <g text-anchor="middle">
+          <text x="327" y="180" font-size="14" font-weight="700" fill="#FFFFFF">Data warehouse</text>
+          <text x="327" y="202" font-size="10.5" fill="#93BDF7">nightly load, 12 to 6am</text>
+          <text x="327" y="232" font-size="11" fill="#E3EEFD">mapping and joins</text>
+          <text x="327" y="250" font-size="11" fill="#E3EEFD">data quality checks</text>
+          <text x="515" y="202" font-size="13" font-weight="700" fill="#0B1B36">Connected sheets</text>
+          <text x="515" y="220" font-size="10.5" fill="#6A7C98">refresh 6 to 7am</text>
+        </g>
+        <g stroke="#1A3F7A" stroke-width="1.5" fill="none" marker-end="url(#ah)">
+          <path d="M190 78 C 220 78, 220 170, 241 170"/>
+          <path d="M190 146 C 215 146, 220 190, 241 190"/>
+          <path d="M190 214 H241"/>
+          <path d="M190 282 C 215 282, 220 240, 241 240"/>
+          <path d="M190 350 C 220 350, 220 262, 241 262"/>
+          <path d="M410 210 H431"/>
+          <path d="M595 210 H636"/>
+        </g>
+        <text x="600" y="200" font-size="10" fill="#2F6FD6">7am</text>
+
+        <g filter="url(#sh)">
+          <rect x="640" y="60" width="185" height="300" rx="12" fill="url(#pipe)"/>
+        </g>
+        <g text-anchor="middle">
+          <text x="732" y="92" font-size="14" font-weight="700" fill="#FFFFFF">People Planner</text>
+          <text x="732" y="110" font-size="10.5" fill="#93BDF7">daily sync from the warehouse</text>
+        </g>
+        <g font-size="11" fill="#E3EEFD">
+          <rect x="655" y="128" width="155" height="34" rx="8" fill="rgba(147,189,247,.12)" stroke="rgba(147,189,247,.3)"/>
+          <text x="732" y="149" text-anchor="middle">Allocations and roles</text>
+          <rect x="655" y="170" width="155" height="34" rx="8" fill="rgba(147,189,247,.12)" stroke="rgba(147,189,247,.3)"/>
+          <text x="732" y="191" text-anchor="middle">Rev/head · staff cost · CM%</text>
+          <rect x="655" y="212" width="155" height="34" rx="8" fill="rgba(147,189,247,.12)" stroke="rgba(147,189,247,.3)"/>
+          <text x="732" y="233" text-anchor="middle">Plan vs actual variance</text>
+          <rect x="655" y="254" width="155" height="34" rx="8" fill="rgba(147,189,247,.12)" stroke="rgba(147,189,247,.3)"/>
+          <text x="732" y="275" text-anchor="middle">Practice · hive · client views</text>
+          <rect x="655" y="296" width="155" height="34" rx="8" fill="rgba(147,189,247,.12)" stroke="rgba(147,189,247,.3)"/>
+          <text x="732" y="317" text-anchor="middle">Permissions by group</text>
+        </g>
+
+        <g filter="url(#sh)">
+          <rect x="850" y="90" width="135" height="56" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="850" y="182" width="135" height="56" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="850" y="274" width="135" height="56" rx="10" fill="#fff" stroke="#93BDF7"/>
+        </g>
+        <g text-anchor="middle">
+          <text x="917" y="114" font-size="12.5" font-weight="700" fill="#0B1B36">Allocation DMs</text>
+          <text x="917" y="131" font-size="10.5" fill="#6A7C98">every employee, monthly</text>
+          <text x="917" y="206" font-size="12.5" font-weight="700" fill="#0B1B36">Dashboards</text>
+          <text x="917" y="223" font-size="10.5" fill="#6A7C98">gaps, KPIs, heatmaps</text>
+          <text x="917" y="298" font-size="12.5" font-weight="700" fill="#0B1B36">Financial reporting</text>
+          <text x="917" y="315" font-size="10.5" fill="#6A7C98">rev/head, SCR, CM%</text>
+        </g>
+        <g stroke="#1A3F7A" stroke-width="1.5" fill="none" marker-end="url(#ah)">
+          <path d="M825 118 H846"/><path d="M825 210 H846"/><path d="M825 302 H846"/>
+        </g>
+
+        <path d="M732 360 C 732 440, 327 440, 327 284" stroke="#5B95F0" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#ahl)"/>
+        <text x="530" y="452" font-size="11" fill="#2F6FD6" text-anchor="middle">locked allocations export back to the warehouse every month</text>
+      </svg>
+    </div>
+
+    <div class="tech-grid" style="margin-top:18px">
+      <div class="card reveal">
+        <h4>Connecting the sources</h4>
+        <p>Defined with the data warehouse team which fields the tool needed from each system and how they join: clients and deals to forecast revenue, people to levels and cost, open roles to forecast start dates, and time tracking to allocations.</p>
+      </div>
+      <div class="card reveal">
+        <h4>Troubleshooting the joins</h4>
+        <p>Chased down the issues that broke the numbers: clients missing a hive assignment in HubSpot, people showing $0 revenue per head from mapping gaps, duplicate headcount for people in two regions, and placeholder rows counted as real capacity.</p>
+      </div>
+      <div class="card reveal">
+        <h4>Guardrails on the pipeline</h4>
+        <p>Pushed for alerts when a source sheet hadn't refreshed or came through blank, tests on the calculation functions, and a time tracking import that only brings in completed months.</p>
+      </div>
+      <div class="card reveal">
+        <h4>Closing the loop</h4>
+        <p>Locked allocations now export to the warehouse each month and come back as the baseline for plan-versus-actual variance, so planning gets more accurate every cycle.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRODUCT ============ -->
+<section id="product" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">The product</div>
+    <h2 class="reveal">Plan the month with the money in view</h2>
+    <p class="section-lede reveal">Leaders allocate each person across clients, pick their role, and see the financial effect immediately. Layout and logic match the real tool; the names, clients and numbers below are invented.</p>
+
+    <div class="window reveal" style="margin-top:28px">
+      <div class="window-bar"><i></i><i></i><i></i><span>people planner · by practice · December</span></div>
+      <div class="pp-wrap">
+        <table class="pp">
+          <thead>
+            <tr><th class="lft">Person</th><th>Level</th><th>Northwind Outdoors</th><th>Harbor Bank</th><th class="pipe">Lumen Labs <small>pipeline</small></th><th class="nc">Non-client</th><th>Unallocated</th><th>Rev/head vs benchmark</th></tr>
+            <tr class="sum"><td class="lft">Practice revenue</td><td></td><td>$84k</td><td>$52k</td><td class="pipe">$30k <small>weighted</small></td><td class="nc"></td><td></td><td></td></tr>
+            <tr class="sum"><td class="lft">Practice CM%</td><td></td><td>48%</td><td>41%</td><td class="pipe">n/a</td><td class="nc"></td><td></td><td></td></tr>
+          </thead>
+          <tbody>
+            <tr><td class="lft">Sam R.</td><td>L4</td><td><b>40%</b> <span class="r s">S</span></td><td><b>40%</b> <span class="r l">L</span></td><td class="pipe"></td><td class="nc">15%</td><td>5%</td><td><span class="bm"><i style="width:92%"></i></span> 1.1×</td></tr>
+            <tr><td class="lft">Priya K.</td><td>L3</td><td><b>60%</b> <span class="r l">L</span></td><td><b>25%</b> <span class="r c">C</span></td><td class="pipe"></td><td class="nc">15%</td><td>0%</td><td><span class="bm"><i style="width:80%"></i></span> 0.9×</td></tr>
+            <tr><td class="lft">Jordan P.</td><td>L2</td><td><b>50%</b> <span class="r c">C</span></td><td></td><td class="pipe"><b>40%</b> <span class="r c">C</span></td><td class="nc">10%</td><td>0%</td><td><span class="bm"><i style="width:70%"></i></span> 0.8×</td></tr>
+            <tr class="leave"><td class="lft">Casey M.</td><td>L2</td><td></td><td><b>60%</b> <span class="r l">L</span></td><td class="pipe"></td><td class="nc">10%</td><td class="warn">30%</td><td><span class="bm"><i style="width:45%"></i></span> 0.5×</td></tr>
+            <tr class="open"><td class="lft">Open role · Specialist</td><td>L2</td><td></td><td></td><td class="pipe"><b>60%</b> <span class="r c">C</span></td><td class="nc"></td><td>40%</td><td>from Jan</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="legend" style="margin-top:14px">
+      <span><span class="r s">S</span>Sponsor</span>
+      <span><span class="r l">L</span>Lead</span>
+      <span><span class="r c">C</span>Contributor</span>
+      <span><i style="background:var(--blue-100)"></i>Pipeline client or open role</span>
+      <span><i style="background:#FDE9E2"></i>Unallocated time to review</span>
+    </div>
+
+    <h3 class="reveal">The metrics, defined once</h3>
+    <div class="card formula reveal">
+      <div class="eq">
+        <span class="c"># per person, per client</span><br>
+        <span class="k">weight</span>      = allocation × role points<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c">Sponsor 6 · Lead 2 · Contributor 1</span><br>
+        <span class="k">rev_head</span>    = Σ clients (weight ÷ group weight) × revenue<br>
+        <span class="k">staff_cost</span>  = Σ people cost × share of client time<br>
+        <span class="k">SCR</span>         = staff_cost ÷ revenue<br>
+        <span class="k">CM%</span>         = (revenue − staff_cost) ÷ revenue
+      </div>
+      <div class="why">
+        <p><strong>Role-weighted, not just time-weighted.</strong> A Sponsor carries more accountability than a Contributor at the same allocation, so revenue credit follows ownership.</p>
+        <p><strong>Benchmarks by level.</strong> Revenue per head is compared against a target for each level, which makes it a fair read across practices with different seniority mixes.</p>
+        <p style="margin:0"><strong>Rules built into the tool.</strong> Non-client time is capped by level, and each client gets one Sponsor and one Lead per group, so the data stays clean by design.</p>
+      </div>
+    </div>
+
+    <h3 class="reveal">The monthly cadence</h3>
+    <div class="card diagram reveal" style="margin-top:0">
+      <svg viewBox="0 0 1000 170" role="img" aria-label="Monthly cadence: actuals land on working day 3, leads get unallocated-time reminders, resourcing calls in week three, the month locks on the third-to-last working day, and every employee gets their allocations on the last working day">
+        <line x1="60" y1="80" x2="940" y2="80" stroke="#C7DDFB" stroke-width="4" stroke-linecap="round"/>
+        <g text-anchor="middle">
+          <circle cx="90" cy="80" r="14" fill="#fff" stroke="#2F6FD6" stroke-width="3"/>
+          <text x="90" y="40" font-size="12.5" font-weight="700" fill="#0B1B36">Working day 3</text>
+          <text x="90" y="122" font-size="11" fill="#3A4D6B">Last month's actuals</text>
+          <text x="90" y="138" font-size="11" fill="#3A4D6B">land in the tool</text>
+
+          <circle cx="300" cy="80" r="14" fill="#fff" stroke="#2F6FD6" stroke-width="3"/>
+          <text x="300" y="40" font-size="12.5" font-weight="700" fill="#0B1B36">Week 2</text>
+          <text x="300" y="122" font-size="11" fill="#3A4D6B">Leads get a Slack DM</text>
+          <text x="300" y="138" font-size="11" fill="#3A4D6B">listing unallocated time</text>
+
+          <circle cx="500" cy="80" r="14" fill="#fff" stroke="#2F6FD6" stroke-width="3"/>
+          <text x="500" y="40" font-size="12.5" font-weight="700" fill="#0B1B36">Week 3</text>
+          <text x="500" y="122" font-size="11" fill="#3A4D6B">Resourcing calls agree</text>
+          <text x="500" y="138" font-size="11" fill="#3A4D6B">next month's staffing</text>
+
+          <circle cx="710" cy="80" r="16" fill="#0F2C5C"/>
+          <text x="710" y="85" font-size="13" fill="#fff">🔒</text>
+          <text x="710" y="40" font-size="12.5" font-weight="700" fill="#0B1B36">3rd-to-last working day</text>
+          <text x="710" y="122" font-size="11" fill="#3A4D6B">Next month locks for</text>
+          <text x="710" y="138" font-size="11" fill="#3A4D6B">reporting and messages</text>
+
+          <circle cx="910" cy="80" r="14" fill="#2F6FD6"/>
+          <text x="910" y="40" font-size="12.5" font-weight="700" fill="#0B1B36">Last working day</text>
+          <text x="910" y="122" font-size="11" fill="#3A4D6B">Every employee gets</text>
+          <text x="910" y="138" font-size="11" fill="#3A4D6B">their allocations</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FEEDBACK ============ -->
+<section id="feedback">
+  <div class="wrap">
+    <div class="eyebrow reveal">Adoption</div>
+    <h2 class="reveal">How a tool becomes how the company works</h2>
+    <p class="section-lede reveal">Adoption wasn't left to launch day. Every piece of feedback had a home, every release told people what changed, and the habits around the tool were designed alongside it.</p>
+
+    <div class="card split reveal">
+      <div class="split-head"><strong>Feedback board, August to October</strong><span>158 items logged across 16 categories</span></div>
+      <div class="bar" id="bar"><i class="b1" data-w="88.6"></i><i class="b2" data-w="11.4"></i></div>
+      <div class="legend">
+        <span><i style="background:var(--navy-700)"></i>Shipped · 140</span>
+        <span><i style="background:var(--blue-300)"></i>Roadmap or in progress · 18</span>
+      </div>
+    </div>
+
+    <ul class="checks" style="margin-top:20px">
+      <li class="card reveal"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span><div><strong>Focus groups and alpha</strong>Leads from different practices and regions tested early builds and shaped the views, filters and permissions before launch.</div></li>
+      <li class="card reveal"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span><div><strong>One feedback board</strong>Every request triaged by category, priority and region, assigned to a release batch, and closed with a note to the person who raised it.</div></li>
+      <li class="card reveal"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span><div><strong>Enablement everywhere</strong>A beginner's guide, walkthrough video, best practices page, tips embedded in the tool and a dedicated Slack channel for questions.</div></li>
+      <li class="card reveal"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span><div><strong>Automation that builds the habit</strong>Monthly reminders to leads and allocation messages to every employee made the lock date matter and kept the data current. <a href="../allocation-messages/">See the allocation messages →</a></div></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ RESULTS ============ -->
+<section id="impact" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">Results</div>
+    <h2 class="reveal">What changed</h2>
+    <div class="impact">
+      <div class="card lead wide reveal"><div class="big">Full adoption</div><h4>Every leader plans in one tool, every direct employee is allocated</h4><p>Resourcing moved from scattered spreadsheets to a single company-wide system that leaders actually use every month, on a fixed cadence.</p></div>
+      <div class="card wide reveal"><div class="big">Centralised</div><h4>Allocation and financial data in one place</h4><p>Revenue, cost, people and hours meet in the same view, so planning, forecasting and reporting all start from the same numbers.</p></div>
+      <div class="card reveal"><div class="big">Measurable</div><h4>Efficiency at every level</h4><p>Revenue per head, staff cost ratio and contribution margin are tracked by person, practice, hive and client, not estimated after the fact.</p></div>
+      <div class="card reveal"><div class="big">25 of 26</div><h4>Open roles with an internal option</h4><p>The first company-wide read flagged internal candidates with spare capacity for 25 of 26 open roles, so hiring starts with who's already here.</p></div>
+      <div class="card reveal"><div class="big">Cleaner data</div><h4>Problems surface monthly</h4><p>$0 revenue rows, missing hives and unallocated time now show up as flags each cycle instead of year-end surprises.</p></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span><strong>People Planner: Company-wide Rollout</strong> · 2026</span>
+    <a href="../index.html#work" style="color:var(--blue-300)">← More projects</a>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  root.classList.add('js');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Scroll progress
+  var bar = document.getElementById('progress');
+  function onScroll() {
+    var h = root.scrollHeight - root.clientHeight;
+    bar.style.width = (h > 0 ? (root.scrollTop / h) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // Count-up
+  function countUp(el) {
+    var target = parseInt(el.getAttribute('data-count'), 10);
+    if (reduce || isNaN(target) || target < 5) { el.textContent = target; return; }
+    var start = null, dur = 1100;
+    function step(t) {
+      if (!start) start = t;
+      var p = Math.min((t - start) / dur, 1);
+      el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  if (!('IntersectionObserver' in window)) {
+    document.querySelectorAll('.reveal').forEach(function (e) { e.classList.add('in'); });
+    document.querySelectorAll('#bar i').forEach(function (i) { i.style.width = i.dataset.w + '%'; });
+    return;
+  }
+
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      var el = en.target;
+      el.classList.add('in');
+      var n = el.querySelector('[data-count]');
+      if (n) countUp(n);
+      if (el.querySelector('#bar')) {
+        el.querySelectorAll('#bar i').forEach(function (i) { i.style.width = i.dataset.w + '%'; });
+      }
+      io.unobserve(el);
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(function (e) { io.observe(e); });
+
+  // Active nav link
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav a.link'));
+  var map = {};
+  links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+  var so = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (en.isIntersecting && map[en.target.id]) {
+        links.forEach(function (a) { a.classList.remove('active'); });
+        map[en.target.id].classList.add('active');
+      }
+    });
+  }, { rootMargin: '-45% 0px -50% 0px' });
+  document.querySelectorAll('main section[id]').forEach(function (s) { so.observe(s); });
+})();
+</script>
+</body>
+</html>
