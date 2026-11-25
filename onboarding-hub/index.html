@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Automated Client Onboarding</title>
+<meta name="description" content="A HubSpot win triggers a chain of Claude skills that takes a new client from signed deal to business as usual in Notion.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #061430;
+    --navy-800: #0A1F44;
+    --navy-700: #0F2C5C;
+    --navy-600: #1A3F7A;
+    --blue-500: #2F6FD6;
+    --blue-400: #5B95F0;
+    --blue-300: #93BDF7;
+    --blue-200: #C7DDFB;
+    --blue-100: #E3EEFD;
+    --blue-50:  #F3F8FF;
+    --ink: #0B1B36;
+    --ink-2: #3A4D6B;
+    --ink-3: #6A7C98;
+    --line: #D6E3F5;
+    --white: #FFFFFF;
+    --radius: 14px;
+    --radius-sm: 10px;
+    --shadow-sm: 0 1px 2px rgba(10,31,68,.06), 0 2px 8px rgba(10,31,68,.05);
+    --shadow: 0 1px 2px rgba(10,31,68,.06), 0 12px 32px -8px rgba(10,31,68,.18);
+    --page: 1120px;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+  body {
+    margin: 0;
+    background: var(--blue-50);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .wrap { max-width: var(--page); margin: 0 auto; padding: 0 28px; }
+  a { color: var(--blue-500); }
+  strong { font-weight: 600; color: var(--ink); }
+  p { margin: 0 0 16px; color: var(--ink-2); }
+  h1, h2, h3, h4 { margin: 0; color: var(--ink); letter-spacing: -0.02em; }
+  h2 { font-size: clamp(30px, 4vw, 42px); line-height: 1.1; font-weight: 700; margin-bottom: 18px; }
+  h3 { font-size: 22px; line-height: 1.3; font-weight: 600; margin: 44px 0 12px; }
+  code {
+    font-family: var(--mono); font-size: 0.82em;
+    background: var(--blue-100); color: var(--navy-700);
+    border: 1px solid var(--blue-200); border-radius: 6px; padding: 1px 6px;
+    word-break: break-word;
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 12.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--blue-500); margin-bottom: 14px;
+  }
+  .eyebrow::before { content: ""; width: 22px; height: 2px; background: currentColor; border-radius: 2px; }
+  .section-lede { font-size: 19px; max-width: 760px; }
+
+  /* ---------- Progress + nav ---------- */
+  .progress { position: fixed; top: 0; left: 0; height: 3px; width: 0; z-index: 60;
+    background: linear-gradient(90deg, var(--blue-400), var(--blue-200)); }
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(6,20,48,.82); backdrop-filter: saturate(160%) blur(14px); -webkit-backdrop-filter: saturate(160%) blur(14px);
+    border-bottom: 1px solid rgba(147,189,247,.14);
+  }
+  .nav .wrap { display: flex; align-items: center; gap: 24px; height: 60px; }
+  .nav .brand { color: var(--white); font-weight: 600; font-size: 15px; white-space: nowrap; display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .nav .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--blue-300); box-shadow: 0 0 0 4px rgba(147,189,247,.18); }
+  .nav ul { list-style: none; display: flex; gap: 4px; margin: 0 0 0 auto; padding: 0; overflow-x: auto; scrollbar-width: none; }
+  .nav ul::-webkit-scrollbar { display: none; }
+  .nav a.link { display: block; padding: 6px 11px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: rgba(227,238,253,.72); text-decoration: none; white-space: nowrap; transition: background .2s, color .2s; }
+  .nav a.link:hover { color: var(--white); background: rgba(147,189,247,.12); }
+  .nav a.link.active { color: var(--white); background: rgba(147,189,247,.2); }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    position: relative; overflow: hidden; color: var(--white);
+    background:
+      radial-gradient(900px 480px at 85% -10%, rgba(91,149,240,.42), transparent 60%),
+      radial-gradient(700px 420px at -10% 110%, rgba(47,111,214,.35), transparent 60%),
+      linear-gradient(180deg, var(--navy-900), var(--navy-800));
+    padding: 96px 0 72px;
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(147,189,247,.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(147,189,247,.08) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at 60% 30%, #000 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at 60% 30%, #000 30%, transparent 75%);
+  }
+  .hero .wrap { position: relative; }
+  .status {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 13px; font-weight: 500; color: var(--blue-100);
+    padding: 6px 14px 6px 10px; border-radius: 999px;
+    background: rgba(147,189,247,.12); border: 1px solid rgba(147,189,247,.28);
+  }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: #7FD3FF; position: relative; }
+  .pulse::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid #7FD3FF; opacity: .6; animation: ping 2s infinite; }
+  @keyframes ping { 0% { transform: scale(.6); opacity: .7; } 100% { transform: scale(1.8); opacity: 0; } }
+  .hero h1 { color: var(--white); font-size: clamp(42px, 7vw, 84px); line-height: 1.02; font-weight: 800; letter-spacing: -0.035em; margin: 24px 0 22px; max-width: 900px; }
+  .hero h1 span { background: linear-gradient(90deg, var(--blue-200), var(--blue-400)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero .lede { font-size: clamp(18px, 2vw, 22px); line-height: 1.5; color: rgba(227,238,253,.85); max-width: 720px; margin: 0; }
+  .meta {
+    margin-top: 48px; display: grid; grid-template-columns: repeat(3, 1fr);
+    border: 1px solid rgba(147,189,247,.2); border-radius: var(--radius);
+    background: rgba(10,31,68,.55); backdrop-filter: blur(8px); overflow: hidden;
+  }
+  .meta div { padding: 18px 22px; border-right: 1px solid rgba(147,189,247,.14); border-bottom: 1px solid rgba(147,189,247,.14); }
+  .meta div:nth-child(3n) { border-right: 0; }
+  .meta div:nth-last-child(-n+3) { border-bottom: 0; }
+  .meta dt { font-size: 11.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--blue-300); margin-bottom: 6px; }
+  .meta dd { margin: 0; font-size: 15px; line-height: 1.5; color: var(--blue-50); }
+
+  /* ---------- Sections ---------- */
+  section { padding: 96px 0; }
+  section.alt { background: var(--white); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .card { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+
+  /* ---------- Stats ---------- */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 36px; }
+  .stat { padding: 22px 22px 20px; position: relative; overflow: hidden; transition: transform .25s, box-shadow .25s; }
+  .stat:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .stat .num { font-size: 42px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; color: var(--navy-800); font-variant-numeric: tabular-nums; }
+  .stat .label { font-size: 14.5px; line-height: 1.45; color: var(--ink-2); margin-top: 8px; }
+  .stat .src { font-size: 12px; color: var(--ink-3); margin-top: 12px; font-family: var(--mono); }
+  .stat.feature { background: linear-gradient(150deg, var(--navy-700), var(--navy-900)); border-color: var(--navy-700); }
+  .stat.feature .num, .stat.feature .label { color: var(--white); }
+  .stat.feature .src { color: var(--blue-300); }
+  .stat.feature::after { content: ""; position: absolute; right: -40px; top: -40px; width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle, rgba(91,149,240,.45), transparent 70%); }
+
+  .split { margin-top: 20px; padding: 24px; }
+  .split-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .split-head strong { font-size: 15px; }
+  .split-head span { font-size: 13px; color: var(--ink-3); }
+  .bar { display: flex; height: 14px; border-radius: 999px; overflow: hidden; background: var(--blue-100); }
+  .bar i { display: block; height: 100%; width: 0; transition: width 1.2s cubic-bezier(.2,.7,.2,1); }
+  .bar .b1 { background: var(--navy-700); }
+  .bar .b2 { background: var(--blue-300); }
+  .bar .b3 { background: var(--blue-500); }
+  .legend { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 14px; font-size: 13.5px; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  /* ---------- Before / after ---------- */
+  .ba { display: grid; grid-template-columns: 1fr 56px 1fr; align-items: stretch; margin-top: 36px; }
+  .ba .card { padding: 28px; }
+  .ba h4 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; margin-bottom: 16px; color: var(--ink-3); }
+  .ba .after { background: linear-gradient(160deg, var(--navy-800), var(--navy-900)); border-color: var(--navy-700); box-shadow: var(--shadow); }
+  .ba .after h4 { color: var(--blue-300); }
+  .ba .after p { color: rgba(227,238,253,.82); }
+  .ba p { font-size: 15px; margin: 18px 0 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { font-size: 13.5px; font-weight: 500; padding: 6px 12px; border-radius: 999px; }
+  .chip.old { background: var(--blue-50); color: var(--ink-3); border: 1px dashed #B8C8E0; text-decoration: line-through; text-decoration-color: rgba(106,124,152,.5); }
+  .chip.new { background: rgba(147,189,247,.14); color: var(--blue-100); border: 1px solid rgba(147,189,247,.35); }
+  .chip.new.hi { background: var(--blue-300); color: var(--navy-900); border-color: var(--blue-300); }
+  .arrow { display: flex; align-items: center; justify-content: center; color: var(--blue-500); }
+  .arrow svg { width: 28px; height: 28px; }
+
+  .brief { margin-top: 28px; padding: 24px 28px; border-left: 4px solid var(--blue-500); border-radius: var(--radius-sm); background: var(--blue-100); }
+  .brief p { margin: 0; color: var(--ink); font-size: 17px; }
+
+  /* ---------- Principles ---------- */
+  .principles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 32px; }
+  .principle { padding: 28px; transition: transform .25s, box-shadow .25s; }
+  .principle:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--blue-100); color: var(--blue-500); margin-bottom: 18px; }
+  .icon svg { width: 22px; height: 22px; }
+  .principle h4 { font-size: 19px; font-weight: 600; margin-bottom: 8px; }
+  .principle p { font-size: 15.5px; margin: 0; }
+
+  /* ---------- Workflow ---------- */
+  .flow { margin-top: 32px; padding: 10px; }
+  .flow-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 14px 16px 10px; }
+  .flow-head small { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+  .flow-row { display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: center; padding: 14px 16px; border-radius: 12px; transition: background .2s; }
+  .flow-row:hover { background: var(--blue-50); }
+  .flow-row + .flow-row { border-top: 1px solid var(--line); }
+  .step { display: flex; align-items: center; gap: 14px; }
+  .step .n { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 10px; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+  .step.meta-only .n { background: var(--blue-100); color: var(--navy-700); border: 1px solid var(--blue-200); }
+  .step.reads .n { background: var(--blue-500); color: var(--white); }
+  .step.out .n { background: var(--navy-800); color: var(--white); }
+  .step b { display: block; font-size: 15.5px; font-weight: 600; line-height: 1.3; }
+  .step small { display: block; font-size: 12.5px; color: var(--ink-3); line-height: 1.35; }
+  .flow-row p { margin: 0; font-size: 15px; line-height: 1.55; }
+  .count { display: flex; align-items: baseline; gap: 8px; padding-left: 16px; border-left: 2px solid var(--blue-200); }
+  .count strong { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--navy-800); }
+  .count span { font-size: 13px; color: var(--ink-2); line-height: 1.3; }
+  .count code { font-size: 11px; display: block; margin-top: 2px; width: fit-content; }
+  .flow-row.final { background: linear-gradient(90deg, var(--blue-100), transparent); }
+  .flow-row.final .count strong { color: var(--blue-500); }
+  .divider { display: flex; align-items: center; gap: 14px; padding: 10px 16px; font-size: 12.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--blue-500); }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 0; border-top: 1.5px dashed var(--blue-300); }
+  .flow .legend { padding: 10px 16px 8px; }
+
+  /* ---------- Architecture ---------- */
+  .diagram { margin-top: 32px; padding: 18px; overflow-x: auto; }
+  .diagram svg { display: block; width: 100%; min-width: 820px; height: auto; font-family: 'Inter', system-ui, sans-serif; }
+  .paths { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 18px; }
+  .path { padding: 26px; }
+  .tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; letter-spacing: .04em; padding: 4px 12px; border-radius: 999px; background: var(--blue-100); color: var(--navy-700); margin-bottom: 14px; }
+  .tag i { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--navy-700); color: var(--white); font-style: normal; font-size: 11px; }
+  .path h4 { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .path p { font-size: 15px; margin: 0; }
+
+  /* ---------- Technical ---------- */
+  .tech-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .tech-grid .card { padding: 26px; }
+  .tech-grid h4 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+  .tech-grid p { font-size: 15.5px; margin: 0; }
+  .formula { display: grid; grid-template-columns: 1.1fr 1fr; gap: 0; overflow: hidden; margin-top: 18px; }
+  .formula .eq { white-space: nowrap; overflow-x: auto; background: var(--navy-900); color: var(--blue-100); padding: 26px 28px; font-family: var(--mono); font-size: 14px; line-height: 2; }
+  .formula .eq .k { color: var(--blue-300); }
+  .formula .eq .c { color: #7E93B5; }
+  .formula .why { padding: 26px 28px; }
+  .formula .why p { font-size: 15.5px; }
+  .formula .why p:last-child { margin: 0; }
+
+  .checks { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .checks li { display: flex; gap: 14px; padding: 20px; }
+  .checks li .tick { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 8px; background: var(--blue-100); color: var(--blue-500); display: grid; place-items: center; }
+  .checks li .tick svg { width: 14px; height: 14px; }
+  .checks li div { font-size: 15px; line-height: 1.55; color: var(--ink-2); }
+  .checks li strong { display: block; color: var(--ink); margin-bottom: 2px; }
+
+  /* ---------- Mock frames ---------- */
+  .output-grid { display: grid; grid-template-columns: 1fr 1.25fr; gap: 28px; align-items: start; margin-top: 28px; }
+  .output-item h3 { margin-top: 0; display: flex; align-items: center; gap: 12px; }
+  .output-item h3 .n { width: 30px; height: 30px; border-radius: 9px; background: var(--navy-800); color: var(--white); display: grid; place-items: center; font-size: 14px; font-weight: 700; }
+  .output-item > p { font-size: 15.5px; }
+  .window { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); background: var(--white); box-shadow: var(--shadow); }
+  .window-bar { display: flex; align-items: center; gap: 7px; padding: 11px 14px; background: var(--blue-50); border-bottom: 1px solid var(--line); }
+  .window-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--blue-200); }
+  .window-bar span { margin-left: 10px; font-size: 12px; color: var(--ink-3); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .consent { padding: 0; }
+  .consent-top { height: 72px; background: linear-gradient(120deg, var(--navy-800), var(--blue-500)); position: relative; }
+  .consent-top::after { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,.18) 1px, transparent 1px); background-size: 14px 14px; }
+  .consent-body { padding: 0 28px 26px; }
+  .consent-check { width: 56px; height: 56px; border-radius: 50%; background: var(--white); border: 4px solid var(--white); box-shadow: var(--shadow); display: grid; place-items: center; margin-top: -28px; position: relative; }
+  .consent-check div { width: 100%; height: 100%; border-radius: 50%; background: var(--blue-500); color: var(--white); display: grid; place-items: center; }
+  .consent-check svg { width: 22px; height: 22px; }
+  .consent h5 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 16px 0 4px; }
+  .consent .as { font-size: 14.5px; color: var(--ink-2); margin-bottom: 18px; }
+  .conn { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; background: var(--blue-50); border: 1px solid var(--blue-200); font-size: 14.5px; font-weight: 600; margin-bottom: 8px; }
+  .conn svg { width: 16px; height: 16px; color: var(--blue-500); }
+  .conn span { margin-left: auto; font-size: 12px; font-weight: 500; color: var(--blue-500); }
+  .consent-foot { border-top: 1px solid var(--line); padding: 16px 28px 20px; font-size: 13.5px; color: var(--ink-2); line-height: 1.55; }
+
+  .notion { padding: 26px 30px 28px; }
+  .crumb { font-size: 12.5px; color: var(--ink-3); margin-bottom: 8px; }
+  .notion h5 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 18px; }
+  .props { display: grid; grid-template-columns: 190px 1fr; row-gap: 7px; font-size: 14px; margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+  .props dt { color: var(--ink-3); }
+  .props dd { margin: 0; color: var(--ink); }
+  .pill { display: inline-block; font-size: 12px; font-weight: 500; padding: 1px 9px; border-radius: 6px; background: var(--blue-100); color: var(--navy-700); }
+  .pill.dark { background: var(--navy-700); color: var(--white); }
+  .score { font-weight: 700; }
+  .meter { display: inline-block; vertical-align: middle; width: 90px; height: 6px; border-radius: 9px; background: var(--blue-100); margin-left: 10px; overflow: hidden; }
+  .meter i { display: block; height: 100%; background: linear-gradient(90deg, var(--blue-400), var(--navy-700)); }
+  .notion h6 { font-size: 15px; font-weight: 700; margin: 0 0 8px; }
+  .notion ul { margin: 0 0 18px; padding-left: 20px; font-size: 14px; color: var(--ink-2); }
+  .notion ul li { margin-bottom: 4px; }
+  .todo { list-style: none; padding: 0 !important; }
+  .todo li { display: flex; gap: 10px; align-items: baseline; }
+  .todo li::before { content: ""; width: 13px; height: 13px; flex: 0 0 13px; border: 1.5px solid var(--blue-300); border-radius: 4px; transform: translateY(2px); }
+  .todo small { color: var(--ink-3); }
+
+  .terminal { background: var(--navy-900); border-color: #12284F; }
+  .terminal .window-bar { background: #0B1D3D; border-color: #12284F; }
+  .terminal .window-bar i { background: #22406F; }
+  .terminal .window-bar span { color: #7E93B5; }
+  .terminal pre { margin: 0; padding: 20px 22px 22px; font-family: var(--mono); font-size: 12.5px; line-height: 1.85; color: #C9D8F2; overflow-x: auto; }
+  .t-c { color: #6F86AD; }
+  .t-k { color: var(--blue-300); }
+  .t-x { color: #9FC3FF; }
+  .t-r { color: #E3EEFD; text-decoration: underline; text-decoration-color: rgba(147,189,247,.4); text-underline-offset: 3px; }
+  .t-ok { color: #7FD3FF; }
+  .t-tot { color: var(--white); font-weight: 500; }
+
+  /* ---------- Impact ---------- */
+  .impact { display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; margin-top: 32px; }
+  .impact .card { padding: 26px; grid-column: span 2; transition: transform .25s, box-shadow .25s; }
+  .impact .card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .impact .card.wide { grid-column: span 3; }
+  .impact .card.lead { background: linear-gradient(150deg, var(--navy-700), var(--navy-900)); border-color: var(--navy-700); }
+  .impact .card.lead h4, .impact .card.lead .big { color: var(--white); }
+  .impact .card.lead p { color: rgba(227,238,253,.82); }
+  .impact .big { font-size: 38px; font-weight: 700; letter-spacing: -0.03em; color: var(--navy-800); line-height: 1; margin-bottom: 14px; }
+  .impact h4 { font-size: 17px; font-weight: 600; margin-bottom: 6px; line-height: 1.35; }
+  .impact p { font-size: 15px; margin: 0; }
+
+  /* ---------- Next / lessons ---------- */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; }
+  .timeline { list-style: none; padding: 0; margin: 24px 0 0; position: relative; }
+  .timeline::before { content: ""; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: linear-gradient(var(--blue-400), var(--blue-100)); }
+  .timeline li { position: relative; padding: 0 0 24px 34px; font-size: 15.5px; color: var(--ink-2); }
+  .timeline li::before { content: ""; position: absolute; left: 0; top: 6px; width: 16px; height: 16px; border-radius: 50%; background: var(--white); border: 3px solid var(--blue-500); }
+  .timeline li strong { display: block; margin-bottom: 2px; }
+  .lessons { display: grid; gap: 14px; margin-top: 24px; }
+  .lesson { padding: 20px 22px; display: flex; gap: 16px; }
+  .lesson .q { font-size: 30px; line-height: .9; font-weight: 800; color: var(--blue-300); font-family: Georgia, serif; }
+  .lesson div { font-size: 15px; color: var(--ink-2); }
+  .lesson strong { display: block; margin-bottom: 2px; }
+
+  /* ---------- Footer ---------- */
+  footer { background: var(--navy-900); color: rgba(227,238,253,.7); padding: 40px 0; font-size: 14px; }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  footer strong { color: var(--white); }
+
+  /* ---------- Reveal ---------- */
+  .js .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
+  .js .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .js .reveal { opacity: 1; transform: none; transition: none; }
+    .pulse::after { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 980px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .principles, .paths { grid-template-columns: 1fr; }
+    .output-grid { grid-template-columns: 1fr; }
+    .impact { grid-template-columns: 1fr 1fr; }
+    .impact .card, .impact .card.wide { grid-column: span 1; }
+    .impact .card.lead { grid-column: span 2; }
+    .formula { grid-template-columns: 1fr; }
+    .flow-row { grid-template-columns: 200px 1fr; }
+    .flow-row .count { grid-column: 2; }
+  }
+  @media (max-width: 720px) {
+    body { font-size: 16px; }
+    .wrap { padding: 0 16px; }
+    section { padding: 64px 0; }
+    .hero { padding: 64px 0 48px; }
+    .nav .brand span.full { display: none; }
+    .meta { grid-template-columns: 1fr; }
+    .meta div { border-right: 0 !important; border-bottom: 1px solid rgba(147,189,247,.14) !important; }
+    .meta div:last-child { border-bottom: 0 !important; }
+    .stat .num { font-size: 34px; }
+    .ba { grid-template-columns: 1fr; gap: 0; }
+    .arrow { height: 44px; transform: rotate(90deg); }
+    .tech-grid, .checks, .cols { grid-template-columns: 1fr; }
+    .cols { gap: 24px; }
+    .impact { grid-template-columns: 1fr; }
+    .impact .card, .impact .card.wide, .impact .card.lead { grid-column: span 1; }
+    .flow-row { grid-template-columns: 1fr; gap: 10px; }
+    .flow-row .count { grid-column: 1; }
+    .props { grid-template-columns: 1fr; row-gap: 2px; }
+    .props dd { margin-bottom: 8px; }
+    .notion { padding: 22px; }
+    .consent-body, .consent-foot { padding-left: 20px; padding-right: 20px; }
+  }
+  /* ---------- Slack mock ---------- */
+  .slack { padding: 22px 24px 24px; }
+  .msg { display: flex; gap: 12px; }
+  .avatar { flex: 0 0 38px; width: 38px; height: 38px; border-radius: 9px; background: linear-gradient(150deg, var(--navy-700), var(--blue-500)); color: var(--white); display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+  .msg-main { min-width: 0; }
+  .msg-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+  .msg-head b { font-size: 15px; }
+  .msg-head .app { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: var(--blue-100); color: var(--ink-3); }
+  .msg-head small { font-size: 12px; color: var(--ink-3); }
+  .msg-main p { font-size: 14.5px; margin: 0 0 10px; color: var(--ink); line-height: 1.5; }
+  .msg-main ul { margin: 0 0 12px; padding-left: 20px; font-size: 14.5px; color: var(--ink); }
+  .msg-main ul li { margin-bottom: 3px; }
+  .msg-main .prac { font-style: italic; color: var(--ink-2); margin: 0 0 2px; }
+  .msg-main .fine { font-size: 13px; color: var(--ink-2); margin: 6px 0 0; }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+
+<nav class="nav" aria-label="Sections">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="dot"></span><span class="full">← Jen Cuneo</span></a>
+    <ul>
+      <li><a class="link" href="#problem">Problem</a></li>
+      <li><a class="link" href="#solution">Solution</a></li>
+      <li><a class="link" href="#workflow">Win to BAU</a></li>
+      <li><a class="link" href="#architecture">Architecture</a></li>
+      <li><a class="link" href="#technical">How it's built</a></li>
+      <li><a class="link" href="#impact">Outcome</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="status"><span class="pulse"></span>In use for new NAMER clients</div>
+    <h1>Automated Client Onboarding, <span>Win to BAU</span></h1>
+    <p class="lede">A deal marked won in HubSpot sets off a chain of Claude skills that builds the client's Notion teamspace, writes the handover, pre-fills the onboarding docs and drafts every deliverable through to business as usual.</p>
+    <dl class="meta">
+      <div><dt>Organization</dt><dd>Global media agency (~1,000 people)</dd></div>
+      <div><dt>Timeline</dt><dd>Built October to November 2026, in use with new clients since November</dd></div>
+      <div><dt>Built by</dt><dd>Jen Cuneo</dd></div>
+      <div><dt>Stack</dt><dd>Claude skills, MCP connectors (Notion, HubSpot, Gmail, Google Drive, Slack), Notion teamspaces and databases</dd></div>
+      <div><dt>Audience</dt><dd>Client partners, integrated media leads, practice leads and ops</dd></div>
+      <div><dt>Status</dt><dd>Live and in use with new NAMER clients</dd></div>
+    </dl>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ PROBLEM ============ -->
+<section id="problem" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">The problem</div>
+    <h2 class="reveal">Every onboarding started from scratch</h2>
+    <p class="section-lede reveal">Winning a client kicked off weeks of setup that depended on who happened to run it. Ops rebuilt each teamspace by hand, pitch knowledge was scattered across decks, inboxes and Slack, and every team had its own version of "what good looks like".</p>
+
+    <div class="ba reveal">
+      <div class="card">
+        <h4>Before</h4>
+        <div class="chips">
+          <span class="chip old">Teamspace built by hand</span>
+          <span class="chip old">Pitch context lost in handover</span>
+          <span class="chip old">Client asked the same questions twice</span>
+          <span class="chip old">A different process per team</span>
+        </div>
+        <p>Hours of manual setup per client, inconsistent quality, and client leads spending their first weeks chasing information instead of building the relationship.</p>
+      </div>
+      <div class="arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+      <div class="card after">
+        <h4>After</h4>
+        <div class="chips">
+          <span class="chip new hi">Triggered by the win</span>
+          <span class="chip new hi">Teamspace ready on day one</span>
+          <span class="chip new">One context every skill reads</span>
+          <span class="chip new">Pre-filled docs before the client asks</span>
+          <span class="chip new">21 steps, one standard</span>
+        </div>
+        <p>The win in HubSpot starts the process. Skills draft each deliverable from the client's own teamspace, and the team reviews instead of rebuilding.</p>
+      </div>
+    </div>
+
+    <div class="brief reveal"><p><strong>The brief:</strong> take a new client from signed deal to business as usual the same way every time, with ops setup automated end to end and a Claude skill behind every step, so client leads spend onboarding with the client, not in documents.</p></div>
+  </div>
+</section>
+
+<!-- ============ SOLUTION ============ -->
+<section id="solution">
+  <div class="wrap">
+    <div class="eyebrow reveal">The solution</div>
+    <h2 class="reveal">One hub, one trigger, a skill for every step</h2>
+    <p class="section-lede reveal">The Onboarding Hub in Notion defines 21 steps across four phases, each with an owner, a template, a worked example and the Claude skill that fills the template in. When a deal closes in HubSpot, the client lands in the Notion client database, which triggers the chain: the first skill builds the teamspace and each skill after it picks up where the last one left off.</p>
+    <div class="stats">
+      <div class="card stat feature reveal"><div class="num" data-count="21">21</div><div class="label">standard steps across four phases, from win to BAU</div><div class="src">one process</div></div>
+      <div class="card stat reveal"><div class="num" data-count="20">20</div><div class="label">Claude skills wired into the hub, five built for onboarding</div><div class="src">skill-backed steps</div></div>
+      <div class="card stat reveal"><div class="num" data-count="17">17</div><div class="label">Client Context sections that every skill reads</div><div class="src">shared context</div></div>
+      <div class="card stat reveal"><div class="num">~15h</div><div class="label">of first-draft work per client now produced by skills</div><div class="src">from skill time estimates</div></div>
+    </div>
+    <div class="principles" style="margin-top:20px">
+      <div class="card principle reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+        <h4>Event-driven, not request-driven</h4>
+        <p>Nobody files a ticket for a teamspace. The CRM status change is the trigger, so setup starts the moment the deal is won.</p>
+      </div>
+      <div class="card principle reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></div>
+        <h4>Write context once, read it everywhere</h4>
+        <p>The handover feeds a Client Context that every skill reads through one connector, so the twentieth skill knows what the first one learned.</p>
+      </div>
+      <div class="card principle reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></div>
+        <h4>Draft by AI, owned by people</h4>
+        <p>Skills produce first drafts and flag every gap in red. The team reviews, fills the blanks and owns the result.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WORKFLOW ============ -->
+<section id="workflow" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">How it works</div>
+    <h2 class="reveal">From closed-won to business as usual</h2>
+    <p class="section-lede reveal">Each skill writes into the client's teamspace, and the next one reads from it. The handoff between steps is the teamspace itself.</p>
+
+    <div class="card flow reveal">
+      <div class="flow-head"><strong>The chain, in order</strong></div>
+
+      <div class="flow-row">
+        <div class="step meta-only"><span class="n">1</span><div><b>Deal marked won</b><small>HubSpot</small></div></div>
+        <p>The deal moves to closed-won in HubSpot and the client is added to the Notion client database. That row triggers the onboarding workflow.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step reads"><span class="n">2</span><div><b>Teamspace built</b><small>client-teamspace-builder</small></div></div>
+        <p>The first skill turns the client home template into a working teamspace: every page and database renamed, key links resolved, and every view's data source and filters repointed to the new client. The Onboarding Tasks database arrives with all 21 steps.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step reads"><span class="n">3</span><div><b>Handover page written</b><small>new-biz-handover-builder</small></div></div>
+        <p>Fills the New Biz to Delivery handoff from the pitch folder, fee sheet, SOW, HubSpot, Gmail and Slack, and lists exactly what the leads still need to supply.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step reads"><span class="n">4</span><div><b>Client Context set up</b><small>client-context-builder</small></div></div>
+        <p>Turns the handover into 17 fixed sections (goals, structure, channels, contacts and more) that every downstream skill reads through the Client Context connector.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step reads"><span class="n">5</span><div><b>Onboarding docs pre-filled</b><small>new-client-onboarding-docs</small></div></div>
+        <p>Builds the client Q&amp;A sheet pre-filled with everything learned in the pitch, plus a platform access tracker per scoped practice, ready to send with the kick-off email.</p>
+      </div>
+
+      <div class="divider">Kick-off, discovery and planning</div>
+
+      <div class="flow-row">
+        <div class="step reads"><span class="n">6</span><div><b>Plans and decks drafted</b><small>30/60/90 builder · deck drafter</small></div></div>
+        <p>A draft 30/60/90 is built as a Notion project with linked tasks and a Gantt view. Kick-off and discovery decks are drafted from the teamspace, with anything the team must confirm left in red.</p>
+      </div>
+      <div class="flow-row">
+        <div class="step reads"><span class="n">7</span><div><b>Audits become a roadmap</b><small>audit report builder</small></div></div>
+        <p>Each practice's audit, in whatever format, is merged into one findings workbook and a client-ready findings and testing roadmap deck. Media plan, forecast and pacing skills cover the rest of planning.</p>
+      </div>
+
+      <div class="flow-row final">
+        <div class="step out"><span class="n">8</span><div><b>Go-live and BAU</b><small>QA skills · weekly pulse</small></div></div>
+        <p>Launch QA skills check campaigns in the first hours. After the 30-day review the account moves to business as usual, with a weekly pulse and performance agenda running on the same teamspace.</p>
+      </div>
+
+      <div class="legend">
+        <span><i style="background:var(--blue-100);border:1px solid var(--blue-200)"></i>Trigger</span>
+        <span><i style="background:var(--blue-500)"></i>Claude skill</span>
+        <span><i style="background:var(--navy-800)"></i>Business as usual</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ARCHITECTURE ============ -->
+<section id="architecture">
+  <div class="wrap">
+    <div class="eyebrow reveal">Architecture</div>
+    <h2 class="reveal">CRM trigger, skill chain, one shared context</h2>
+    <p class="section-lede reveal">The client's Notion teamspace is the system of record. Skills read from it through MCP connectors and write their output back into it.</p>
+
+    <div class="card diagram reveal">
+      <svg viewBox="0 0 1000 470" role="img" aria-label="Architecture diagram: a HubSpot closed-won deal adds the client to the Notion client database, which triggers a chain of Claude skills across four onboarding phases, all reading a shared Client Context and writing to the client teamspace">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1A3F7A"/></marker>
+          <marker id="ahl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5B95F0"/></marker>
+          <linearGradient id="pipe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0F2C5C"/><stop offset="1" stop-color="#061430"/></linearGradient>
+          <filter id="sh" x="-10%" y="-10%" width="120%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0A1F44" flood-opacity=".12"/></filter>
+        </defs>
+
+        <text x="20" y="28" font-size="11" font-weight="700" letter-spacing="1.5" fill="#6A7C98">TRIGGER</text>
+        <rect x="210" y="40" width="775" height="420" rx="14" fill="#F3F8FF" stroke="#93BDF7" stroke-dasharray="6 5"/>
+        <text x="226" y="28" font-size="11" font-weight="700" letter-spacing="1.5" fill="#2F6FD6">CLAUDE SKILL CHAIN · ORCHESTRATED FROM THE ONBOARDING HUB</text>
+
+        <!-- trigger boxes -->
+        <g filter="url(#sh)">
+          <rect x="20" y="70" width="165" height="62" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="20" y="180" width="165" height="62" rx="10" fill="#fff" stroke="#93BDF7"/>
+          <rect x="20" y="290" width="165" height="50" rx="25" fill="#2F6FD6"/>
+        </g>
+        <g text-anchor="middle">
+          <text x="102" y="97" font-size="13" font-weight="700" fill="#0B1B36">HubSpot</text>
+          <text x="102" y="115" font-size="10.5" fill="#6A7C98">deal marked closed-won</text>
+          <text x="102" y="207" font-size="13" font-weight="700" fill="#0B1B36">Notion client DB</text>
+          <text x="102" y="225" font-size="10.5" fill="#6A7C98">client row added</text>
+          <text x="102" y="320" font-size="12.5" font-weight="700" fill="#FFFFFF">Workflow triggered</text>
+        </g>
+        <g stroke="#1A3F7A" stroke-width="1.6" fill="none" marker-end="url(#ah)">
+          <path d="M102 132 V176"/>
+          <path d="M102 242 V286"/>
+          <path d="M185 315 C 205 315, 205 98, 218 98"/>
+        </g>
+        <text x="20" y="378" font-size="10.5" font-weight="700" letter-spacing="1" fill="#0F2C5C">CONNECTORS</text>
+        <g font-size="10.5" fill="#6A7C98">
+          <text x="20" y="396">Notion · HubSpot · Gmail</text>
+          <text x="20" y="412">Google Drive · Slack</text>
+          <text x="20" y="428">Client Context</text>
+        </g>
+
+        <!-- phase headers -->
+        <g font-size="10.5" font-weight="700" letter-spacing="1" fill="#0F2C5C" text-anchor="middle">
+          <text x="312" y="66">PRE-KICKOFF</text>
+          <text x="504" y="66">KICKOFF &amp; DISCOVERY</text>
+          <text x="696" y="66">PLANNING</text>
+          <text x="888" y="66">GO-LIVE → BAU</text>
+        </g>
+
+        <!-- skill boxes -->
+        <g filter="url(#sh)">
+          <rect x="222" y="80" width="180" height="36" rx="9" fill="url(#pipe)"/>
+          <rect x="222" y="124" width="180" height="36" rx="9" fill="#fff" stroke="#93BDF7"/>
+          <rect x="222" y="168" width="180" height="36" rx="9" fill="#fff" stroke="#93BDF7"/>
+          <rect x="222" y="212" width="180" height="36" rx="9" fill="#fff" stroke="#93BDF7"/>
+          <rect x="222" y="256" width="180" height="36" rx="9" fill="#fff" stroke="#93BDF7"/>
+          <rect x="222" y="300" width="180" height="36" rx="9" fill="#fff" stroke="#93BDF7"/>
+
+          <rect x="414" y="80" width="180" height="36" rx="9" fill="#fff" stroke="#93BDF7"/>
+          <rect x="414" y="124" width="180" height="36" rx="9" fill="#fff" stroke="#93BDF7"/>
+          <rect x="414" y="168" width="180" height="36" rx="9" fill="#fff" stroke="#93BDF7"/>
+
+          <rect x="606" y="80" width="180" height="36" rx="9" fill="#fff" stroke="#93BDF7"/>
+          <rect x="606" y="124" width="180" height="36" rx="9" fill="#fff" stroke="#93BDF7"/>
+          <rect x="606" y="168" width="180" height="36" rx="9" fill="#fff" stroke="#93BDF7"/>
+          <rect x="606" y="212" width="180" height="36" rx="9" fill="#fff" stroke="#93BDF7"/>
+
+          <rect x="798" y="80" width="175" height="36" rx="9" fill="#fff" stroke="#93BDF7"/>
+          <rect x="798" y="124" width="175" height="36" rx="9" fill="#fff" stroke="#93BDF7"/>
+          <rect x="798" y="168" width="175" height="36" rx="9" fill="#0F2C5C"/>
+        </g>
+        <g font-size="11.5" font-weight="600" fill="#0B1B36" text-anchor="middle">
+          <text x="312" y="102" fill="#FFFFFF">Teamspace builder</text>
+          <text x="312" y="146">New Biz handover</text>
+          <text x="312" y="190">Client Context</text>
+          <text x="312" y="234">Q&amp;A + access docs</text>
+          <text x="312" y="278">Kick-off email</text>
+          <text x="312" y="322">30/60/90 draft</text>
+
+          <text x="504" y="102">Meeting agendas</text>
+          <text x="504" y="146">Kick-off + discovery decks</text>
+          <text x="504" y="183" font-size="10.5">Meeting notes →</text>
+          <text x="504" y="197" font-size="10.5">actions with owners</text>
+
+          <text x="696" y="102">Audit report + roadmap</text>
+          <text x="696" y="146">30/60/90 update</text>
+          <text x="696" y="190">Media plan + forecast</text>
+          <text x="696" y="234">Pacing + tracking audit</text>
+
+          <text x="885" y="102">Launch QA</text>
+          <text x="885" y="146">Performance agenda</text>
+          <text x="885" y="190" fill="#FFFFFF">Weekly pulse (BAU)</text>
+        </g>
+        <g stroke="#1A3F7A" stroke-width="1.6" fill="none" marker-end="url(#ah)">
+          <path d="M402 98 H410"/><path d="M594 98 H602"/><path d="M786 98 H794"/>
+        </g>
+
+        <!-- shared layers -->
+        <rect x="222" y="360" width="751" height="38" rx="10" fill="url(#pipe)"/>
+        <text x="597" y="384" font-size="12" font-weight="600" fill="#E3EEFD" text-anchor="middle">Client Context connector · 17 sections every skill reads</text>
+        <rect x="222" y="408" width="751" height="38" rx="10" fill="#fff" stroke="#93BDF7"/>
+        <text x="597" y="432" font-size="12" font-weight="600" fill="#0B1B36" text-anchor="middle">Client Notion teamspace · pages, tasks, plans and decks written back here</text>
+        <g stroke="#5B95F0" stroke-width="1.4" fill="none" stroke-dasharray="4 4">
+          <path d="M312 336 V358"/><path d="M504 204 V358"/><path d="M696 248 V358"/><path d="M885 204 V358"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TECHNICAL ============ -->
+<section id="technical" class="alt">
+  <div class="wrap">
+    <div class="eyebrow reveal">How it's built</div>
+    <h2 class="reveal">Claude skills, connected to the systems the work lives in</h2>
+    <div class="tech-grid" style="margin-top:28px">
+      <div class="card reveal">
+        <h4>Skills as the unit of automation</h4>
+        <p>Each step's work is packaged as a Claude skill: a versioned set of instructions with its own inputs, outputs and rules. Five were built specifically for onboarding (handover, onboarding docs, 30/60/90, kick-off and discovery decks, audit report), and every skill goes through governance review before it's linked on the hub.</p>
+      </div>
+      <div class="card reveal">
+        <h4>MCP connectors instead of copy and paste</h4>
+        <p>Skills pull from HubSpot for deal and contact data, Gmail and Slack for pitch threads, Google Drive for the pitch folder, fee sheet and SOW, and Notion for everything they write. No one exports or pastes anything between systems.</p>
+      </div>
+      <div class="card reveal">
+        <h4>A shared context layer</h4>
+        <p>The Client Context is a fixed 17-section schema exposed through its own connector. Because every skill reads the same structure, outputs stay consistent with each other, and a correction made once carries into every later draft.</p>
+      </div>
+      <div class="card reveal">
+        <h4>Skills that write real Notion structures</h4>
+        <p>The output isn't text to paste. The teamspace builder repoints database views and filters to the new client, the 30/60/90 builder creates a project with linked tasks and a Gantt timeline, and meeting notes turn into owned tasks in the client's tracker.</p>
+      </div>
+    </div>
+    <div class="brief reveal" style="margin-top:28px"><p><strong>Template, skill, example.</strong> Every step on the hub pairs one template with the skill that fills it and a worked example of a finished one, so people can see what good looks like before they run anything.</p></div>
+  </div>
+</section>
+
+<!-- ============ OUTCOME ============ -->
+<section id="impact">
+  <div class="wrap">
+    <div class="eyebrow reveal">Outcome</div>
+    <h2 class="reveal">What changed</h2>
+    <div class="impact">
+      <div class="card lead wide reveal"><div class="big">Day one</div><h4>The team walks into onboarding with everything set up</h4><p>Teamspace, handover, client context and pre-filled docs exist before the first internal kick-off, so the opening weeks go on the client instead of on setup.</p></div>
+      <div class="card wide reveal"><div class="big">Zero tickets</div><h4>Ops setup runs itself</h4><p>The closed-won deal is the request. No one has to ask ops for a teamspace or rebuild one by hand for each new client.</p></div>
+      <div class="card reveal"><div class="big">Consistent</div><h4>One standard for every client</h4><p>The same 21 steps, owners and definitions of done, whichever team is running the account.</p></div>
+      <div class="card reveal"><div class="big">Proactive</div><h4>The client validates, not repeats</h4><p>Q&amp;A and access requests go out pre-filled from the pitch, before the client has to ask.</p></div>
+      <div class="card reveal"><div class="big">Scalable</div><h4>Built to grow with the skill library</h4><p>Adding a skill to a step improves every future onboarding, with no change to the trigger or the teamspace.</p></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span><strong>Automated Client Onboarding, Win to BAU</strong> · 2026</span>
+    <a href="../index.html#work" style="color:var(--blue-300)">← More projects</a>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  root.classList.add('js');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Scroll progress
+  var bar = document.getElementById('progress');
+  function onScroll() {
+    var h = root.scrollHeight - root.clientHeight;
+    bar.style.width = (h > 0 ? (root.scrollTop / h) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // Count-up
+  function countUp(el) {
+    var target = parseInt(el.getAttribute('data-count'), 10);
+    if (reduce || isNaN(target) || target < 5) { el.textContent = target; return; }
+    var start = null, dur = 1100;
+    function step(t) {
+      if (!start) start = t;
+      var p = Math.min((t - start) / dur, 1);
+      el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  if (!('IntersectionObserver' in window)) {
+    document.querySelectorAll('.reveal').forEach(function (e) { e.classList.add('in'); });
+    document.querySelectorAll('#bar i').forEach(function (i) { i.style.width = i.dataset.w + '%'; });
+    return;
+  }
+
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      var el = en.target;
+      el.classList.add('in');
+      var n = el.querySelector('[data-count]');
+      if (n) countUp(n);
+      if (el.querySelector('#bar')) {
+        el.querySelectorAll('#bar i').forEach(function (i) { i.style.width = i.dataset.w + '%'; });
+      }
+      io.unobserve(el);
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(function (e) { io.observe(e); });
+
+  // Active nav link
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav a.link'));
+  var map = {};
+  links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+  var so = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (en.isIntersecting && map[en.target.id]) {
+        links.forEach(function (a) { a.classList.remove('active'); });
+        map[en.target.id].classList.add('active');
+      }
+    });
+  }, { rootMargin: '-45% 0px -50% 0px' });
+  document.querySelectorAll('main section[id]').forEach(function (s) { so.observe(s); });
+})();
+</script>
+</body>
+</html>
