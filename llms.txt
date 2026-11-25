@@ -1,0 +1,20 @@
+# Jen Cuneo
+
+> AI automation and operations manager. I find where operations work gets stuck, then connect the tools and automate the steps, using Claude AI skills, n8n, Google Apps Script, Python and Google Cloud, integrated with Notion, HubSpot, Slack and Google Workspace.
+
+Contact: jncuneo8@gmail.com · LinkedIn: https://www.linkedin.com/in/jennifercuneo
+
+## Case studies
+
+- [Meeting Notes Infrastructure](https://jcuneo-builds.github.io/meeting-notes-infrastructure/): consent-based pipeline that files client meeting notes to Notion and scores account health with Claude; 133 colleagues opted in; threat-modelled with SecOps.
+- [People Planner rollout](https://jcuneo-builds.github.io/people-planner/): project manager and tech lead for a company-wide resourcing tool; every leader adopted it; 140 of 158 feedback items shipped; data warehouse integration.
+- [Client satisfaction survey engine](https://jcuneo-builds.github.io/csat/): Claude skills, HubSpot automation, a live dashboard and a Slack bot; survey response rate up 78% quarter over quarter.
+- [Automated client onboarding](https://jcuneo-builds.github.io/onboarding-hub/): a HubSpot closed-won deal triggers a chain of Claude skills that builds the Notion teamspace and drafts every onboarding step.
+- [Argus](https://jcuneo-builds.github.io/argus/): Python change log and insight generator for DV360; saves 10+ hours a week.
+- [Fee Sheet Builder](https://jcuneo-builds.github.io/fee-sheet/): web app on Cloud Run replacing a pricing spreadsheet, with Claude team suggestions.
+- [Monthly allocation messages](https://jcuneo-builds.github.io/allocation-messages/): two n8n workflows that DM every person their monthly allocations and client leads their team changes.
+- [Usage and adoption dashboards](https://jcuneo-builds.github.io/dashboards/): live dashboards joining Notion, HubSpot and People Planner data.
+
+## Skills
+
+Workflow automation, applied AI (Claude, AI skills, MCP connectors, structured output), n8n, Apps Script, Python, JavaScript, Google Cloud Run, Firestore, Secret Manager, Terraform, GitHub Actions, Notion/HubSpot/Slack/Google Workspace APIs, project management, process improvement, change management, resourcing, pricing, client onboarding, threat modelling and data privacy.
